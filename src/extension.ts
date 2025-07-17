@@ -39,13 +39,28 @@ class PadakItem extends vscode.TreeItem {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Padák Super Extension is now active!');
+    console.log('=== Padák Super Extension ACTIVATE START ===');
+    
+    try {
+        // Show a message to confirm activation
+        vscode.window.showInformationMessage('Padák Super Extension activated successfully! 🎉');
 
-    // Register the tree data provider
-    const treeDataProvider = new PadakTreeProvider();
-    vscode.window.createTreeView('padak-view', {
-        treeDataProvider: treeDataProvider
-    });
+        // Register the tree data provider FIRST
+        const treeDataProvider = new PadakTreeProvider();
+        console.log('TreeDataProvider created');
+        
+        const treeView = vscode.window.createTreeView('padak-view', {
+            treeDataProvider: treeDataProvider,
+            showCollapseAll: true
+        });
+        context.subscriptions.push(treeView);
+        
+        console.log('TreeView registered for padak-view');
+        console.log('Extension path:', context.extensionPath);
+    } catch (error) {
+        console.error('Error in activate:', error);
+        vscode.window.showErrorMessage('Failed to activate Padák extension: ' + error);
+    }
 
     // Register the command
     let disposable = vscode.commands.registerCommand('padak.sayHello', () => {
