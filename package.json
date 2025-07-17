@@ -2,7 +2,7 @@
   "name": "padak-super-extension",
   "displayName": "Padák Super Extension",
   "description": "A simple test extension that shows a button with 'Padák je super' message",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "keboola",
   "license": "MIT",
   "keywords": ["keboola", "padak", "test", "webview"],
@@ -17,7 +17,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
