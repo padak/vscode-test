@@ -1,0 +1,69 @@
+{
+  "name": "padak-super-extension",
+  "displayName": "Padák Super Extension",
+  "description": "A simple test extension that shows a button with 'Padák je super' message",
+  "version": "0.0.1",
+  "publisher": "keboola",
+  "license": "MIT",
+  "keywords": ["keboola", "padak", "test", "webview"],
+  "icon": "media/logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/padak/vscode-test.git"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "padak.sayHello",
+        "title": "Say Hello Padák",
+        "category": "Padák",
+        "icon": "./media/logo.svg"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "padak-explorer",
+          "title": "Padák Super",
+          "icon": "./media/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "padak-explorer": [
+        {
+          "id": "padak-view",
+          "name": "Padák Controls",
+          "when": "true"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "padak.sayHello",
+          "when": "view == padak-view",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  }
+} 
