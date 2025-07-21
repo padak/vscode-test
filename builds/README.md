@@ -19,6 +19,9 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.6.0   | 264KB     | 2025-01-21   | FIXED: Test Connection message positioning (appears below button) |
+| 2.5.6   | 263KB     | 2025-01-21   | Debug enhancement for Test Connection investigation |
+| 2.5.5   | 263KB     | 2025-01-21   | Debug build for Test Connection troubleshooting (overwritten) |
 | 2.5.4   | 262KB     | 2025-01-21   | Working Test Connection with token validation |
 | 2.5.3   | 265KB     | 2025-01-21   | UI consistency fixes, refresh buttons |
 | 2.5.2   | 261KB     | 2025-01-21   | Stage export fixes, empty table handling |
@@ -57,10 +60,10 @@ builds/
 
 ## 🎯 Latest Build
 
-**Current Version:** `2.5.4`
-**File:** `keboola-storage-api-explorer-2.5.4.vsix`
-**Size:** 262KB
-**Features:** Working Test Connection with detailed token validation and project information
+**Current Version:** `2.6.0`
+**File:** `keboola-storage-api-explorer-2.6.0.vsix`
+**Size:** 264KB
+**Features:** FIXED Test Connection message positioning - results appear right below button
 
 ## ⚙️ Build Configuration
 

@@ -161,13 +161,16 @@ export class KeboolaApi {
      */
     async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: string}> {
         try {
+            console.log('testConnection: Making API request to /v2/storage/tokens/verify');
             // Use token verification endpoint for proper validation
             const tokenInfo = await this.makeRequest('/v2/storage/tokens/verify');
+            console.log('testConnection: API request successful, response:', tokenInfo);
             return {
                 success: true,
                 tokenInfo: tokenInfo
             };
         } catch (error) {
+            console.log('testConnection: API request failed:', error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -397,6 +400,8 @@ export class KeboolaApi {
      */
     private async makeRequest(endpoint: string, options?: { method?: string; body?: URLSearchParams }): Promise<any> {
         const url = `${this.apiUrl}${endpoint}`;
+        console.log('makeRequest: URL:', url);
+        console.log('makeRequest: token length:', this.token.length);
         
         try {
             const headers: Record<string, string> = {
@@ -413,11 +418,13 @@ export class KeboolaApi {
                 headers['Content-Type'] = 'application/json';
             }
 
+            console.log('makeRequest: Making fetch request...');
             const response = await fetch(url, {
                 method: options?.method || 'GET',
                 headers,
                 body
             });
+            console.log('makeRequest: Response status:', response.status, response.statusText);
 
             if (!response.ok) {
                 const errorData = await response.text();

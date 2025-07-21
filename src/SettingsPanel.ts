@@ -275,9 +275,12 @@ export class SettingsPanel {
     }
 
     private async handleTestConnection(): Promise<void> {
+        console.log('HandleTestConnection called');
         try {
             const apiUrl = this.context.globalState.get<string>('keboola.apiUrl');
             const token = this.context.globalState.get<string>('keboola.token');
+            console.log('API URL:', apiUrl ? 'set' : 'not set');
+            console.log('Token:', token ? 'set' : 'not set');
 
             if (!apiUrl || !token) {
                 this.panel.webview.postMessage({
@@ -294,8 +297,11 @@ export class SettingsPanel {
                 text: 'Testing connection...'
             });
 
+            console.log('Creating KeboolaApi instance with URL:', apiUrl);
             const api = new KeboolaApi({ apiUrl, token });
+            console.log('KeboolaApi instance created, calling testConnection...');
             const result = await api.testConnection();
+            console.log('testConnection result:', result);
 
             if (result.success && result.tokenInfo) {
                 // Extract useful information from token verification
@@ -321,10 +327,11 @@ export class SettingsPanel {
             }
 
         } catch (error) {
+            console.error('Test connection error:', error);
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'error',
-                text: `Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
     }
@@ -601,11 +608,23 @@ export class SettingsPanel {
                     background-color: var(--vscode-button-secondaryHoverBackground);
                 }
                 
+                #messageContainer {
+                    position: relative;
+                    z-index: 1000;
+                    margin: 10px 0;
+                    min-height: 20px; /* Ensure it takes up space */
+                }
+                
                 .message {
                     padding: 12px;
                     border-radius: 4px;
                     margin-bottom: 16px;
                     border-left: 3px solid;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    position: relative;
+                    z-index: 1001;
                 }
                 
                 .message.success {
@@ -665,7 +684,7 @@ export class SettingsPanel {
         </head>
         <body>
             <div class="settings-container">
-                <div id="messageContainer"></div>
+
                 
                 <div class="section">
                     <h2 class="section-title">🔌 Connection Settings</h2>
@@ -692,8 +711,11 @@ export class SettingsPanel {
                     
                     <div style="display: flex; gap: 12px;">
                         <button class="button" onclick="saveToken()">💾 Save Token</button>
-                        <button class="button secondary" onclick="testConnection()">🔧 Test Connection</button>
+                        <button class="button secondary" onclick="testConnection()" id="testConnectionBtn">🔧 Test Connection</button>
                     </div>
+                    
+                    <!-- Message container right after the Test Connection button -->
+                    <div id="messageContainer" style="margin-top: 15px;"></div>
                 </div>
                 
                 <div class="section">
@@ -804,13 +826,40 @@ export class SettingsPanel {
                 }
                 
                 function testConnection() {
-                    vscode.postMessage({
-                        command: 'testConnection'
-                    });
+                    try {
+                        console.log('Test Connection button clicked');
+                        showMessage('info', '🔄 Testing connection...');
+                        
+                        if (typeof vscode === 'undefined') {
+                            showMessage('error', 'VS Code API not available');
+                            return;
+                        }
+                        
+                        // Clear any existing messages after 1 second before starting test
+                        setTimeout(() => {
+                            const container = document.getElementById('messageContainer');
+                            if (container) {
+                                container.innerHTML = '';
+                            }
+                        }, 1000);
+                        
+                        vscode.postMessage({
+                            command: 'testConnection'
+                        });
+                    } catch (error) {
+                        console.error('Error in testConnection:', error);
+                        showMessage('error', 'Error: ' + error.message);
+                    }
                 }
                 
                 function showMessage(type, text) {
                     const container = document.getElementById('messageContainer');
+                    
+                    if (!container) {
+                        console.error('messageContainer not found!');
+                        return;
+                    }
+                    
                     const messageDiv = document.createElement('div');
                     messageDiv.className = \`message \${type}\`;
                     messageDiv.innerHTML = text; // Use innerHTML to support HTML content like <br>
@@ -827,6 +876,22 @@ export class SettingsPanel {
                     }, timeout);
                 }
                 
+                // Alternative click handler setup
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('DOM loaded');
+                    
+                    const testBtn = document.getElementById('testConnectionBtn');
+                    if (testBtn) {
+                        console.log('Test button found, adding alternative click listener');
+                        testBtn.addEventListener('click', function(e) {
+                            console.log('Alternative click handler triggered');
+                            testConnection();
+                        });
+                    } else {
+                        console.log('Test button not found');
+                    }
+                });
+
                 // Listen for messages from the extension
                 window.addEventListener('message', event => {
                     const message = event.data;

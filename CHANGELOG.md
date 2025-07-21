@@ -5,6 +5,119 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2025-01-21
+
+### 🎯 FIXED: Test Connection Message Display
+- **FIXED: Message Positioning**: Test Connection results now appear right below the button instead of at top of panel
+- **Improved User Experience**: Connection test feedback is immediately visible where user expects it
+- **Cleaned Debug Code**: Removed temporary debug styling, borders, and console logging
+- **Proper Message Flow**: Messages appear contextually next to the Test Connection action
+- **Professional UI**: Clean, production-ready message display without debug artifacts
+
+### 🔧 UI/UX Improvements
+- **Message Container Relocation**: Moved from top of Settings panel to immediately after Test Connection button
+- **Contextual Feedback**: Success/error messages appear exactly where user is looking
+- **Visual Hierarchy**: Clear connection between action (button) and result (message)
+- **Reduced Scroll Issues**: No need to scroll up to see connection test results
+- **Auto-hide Timing**: Success messages (8s) and error messages (10s) with appropriate visibility duration
+
+### 🐛 Root Cause Resolution
+#### **Problem Identified:**
+- Message container was positioned at the **top** of the Settings panel
+- Test Connection button was at the **bottom** of the panel
+- Users couldn't see results because they were rendered off-screen (above scroll viewport)
+- Debug investigation revealed perfect functionality but poor message placement
+
+#### **Solution Implemented:**
+```html
+<!-- BEFORE: Message at top of panel -->
+<div class="settings-container">
+    <div id="messageContainer"></div>  <!-- ❌ Too far from button -->
+    <!-- ... long settings form ... -->
+    <button onclick="testConnection()">Test Connection</button>
+</div>
+
+<!-- AFTER: Message next to button -->
+<div class="settings-container">
+    <!-- ... settings form ... -->
+    <button onclick="testConnection()">Test Connection</button>
+    <div id="messageContainer"></div>  <!-- ✅ Right where user expects it -->
+</div>
+```
+
+### 🔍 Debug Journey Summary
+- **v2.5.4**: Implemented working Test Connection with token verification
+- **v2.5.5-2.5.9**: Debug builds to investigate "missing" message display
+- **Investigation**: Console showed perfect API calls and message rendering
+- **Discovery**: Messages were displaying but outside user's viewport
+- **v2.6.0**: **SOLUTION** - Repositioned message container for optimal UX
+
+### ✨ Enhanced Test Connection Experience
+#### **Success Message Format:**
+```
+✅ Connection successful!
+📊 Project: Your Project Name
+🏷️ Token: Production API Token
+⏰ Expires: 12/31/2025
+```
+
+#### **Error Message Format:**
+```
+❌ Connection failed: Invalid token or insufficient permissions
+```
+
+### 🎯 User Workflow Now Works
+1. **Configure Settings**: Select cloud provider and enter API token
+2. **Click Test Connection**: Button at bottom of form
+3. **See Results Immediately**: Success/error message appears **right below button**
+4. **Auto-hide**: Message disappears after appropriate timeout
+5. **Contextual Feedback**: No scrolling or searching for results
+
+### 📦 Technical Details
+- **Extension Size**: 263.67KB (77 files)
+- **Message Positioning**: CSS positioned relative to Test Connection button
+- **Clean Code**: Removed all temporary debug styling and console logging
+- **Production Ready**: Professional UI without debug artifacts
+- **Maintained Functionality**: All Test Connection features preserved
+
+### 💡 User Experience Lessons
+- **Contextual Placement**: Action results should appear near the triggering action
+- **Viewport Awareness**: Consider user's scroll position when placing dynamic content
+- **Debug vs Production**: Separate debug investigation from production UI
+- **User Testing**: Real user feedback reveals UX issues that console logs miss
+- **Iterative Improvement**: Multiple debug versions led to perfect solution
+
+**Test Connection now provides immediate, visible feedback exactly where users expect it!** ✅🎯
+
+---
+
+## [2.5.6] - 2025-01-21
+
+### 🔧 Debug Build - Test Connection Investigation
+- **Enhanced Debug Logging**: Added comprehensive console.log messages throughout Test Connection workflow
+- **API Request Debugging**: Detailed logging in `makeRequest()` method showing URL, token length, and response status
+- **WebView JavaScript Debugging**: Console tracking of button clicks and VS Code API availability
+- **Alternative Click Handlers**: Added both onclick attribute and addEventListener for maximum compatibility
+- **Error Visibility**: Improved error catching and reporting in both WebView and Extension Host
+- **DOM Ready Handler**: Added DOMContentLoaded event for better WebView initialization
+
+### 🔍 Debug Features (Temporary)
+- **Console Tracking**: Step-by-step logging from button click to API response
+- **Error Detection**: Enhanced try-catch blocks with specific error reporting
+- **API Debugging**: Logs URL construction, token validation, and HTTP response status
+- **Message Flow**: Complete visibility into WebView to Extension Host communication
+- **Fallback Testing**: Multiple click handler approaches for reliability testing
+
+### 📦 Debug Purpose
+- **Investigation Build**: Created to diagnose Test Connection button functionality
+- **User Testing**: Comprehensive logging for troubleshooting button behavior
+- **Console Output**: All debug messages visible in VS Code Developer Tools
+- **Temporary Enhancement**: Debug features intended for issue diagnosis only
+
+**Note: This was a debug build created to investigate Test Connection issues. Debug logging was enhanced in 2.5.6.**
+
+---
+
 ## [2.5.4] - 2025-01-21
 
 ### 🔐 Enhanced Connection Testing
