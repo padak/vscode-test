@@ -410,8 +410,7 @@ export async function exportTableSchema(
         // Get table info
         const tableInfoJson = await executeKbcCommand([
             'remote', 'table', 'detail',
-            tableId,
-            '--format', 'json'
+            tableId
         ], options);
 
         const tableInfo = JSON.parse(tableInfoJson);
@@ -514,8 +513,7 @@ export async function exportBucket(
                 // Fallback: get all tables and filter by bucket prefix
                 outputChannel.appendLine(`No table list provided, fetching all tables and filtering...`);
                 const allTablesJson = await executeKbcCommand([
-                    'remote', 'table', 'list',
-                    '--format', 'json'
+                    'remote', 'table', 'list'
                 ], options);
 
                 const allTables = JSON.parse(allTablesJson);
@@ -634,16 +632,14 @@ export async function exportBucketSchema(
             outputChannel.appendLine(`No bucket detail provided, fetching via CLI...`);
             const bucketInfoJson = await executeKbcCommand([
                 'remote', 'bucket', 'detail',
-                bucketId,
-                '--format', 'json'
+                bucketId
             ], options);
 
             bucketInfo = JSON.parse(bucketInfoJson);
             
             // Get all tables and filter by bucket prefix (no --bucket-id flag exists)
             const allTablesJson = await executeKbcCommand([
-                'remote', 'table', 'list',
-                '--format', 'json'
+                'remote', 'table', 'list'
             ], options);
 
             const allTables = JSON.parse(allTablesJson);
@@ -836,8 +832,7 @@ export async function exportStageSchema(
     try {
         // Get all buckets in stage
         const bucketsJson = await executeKbcCommand([
-            'remote', 'bucket', 'list',
-            '--format', 'json'
+            'remote', 'bucket', 'list'
         ], options);
 
         const allBuckets = JSON.parse(bucketsJson);

@@ -2,7 +2,7 @@
 	"name": "keboola-storage-api-explorer",
 	"displayName": "Keboola Storage API Explorer",
 	"description": "Browse and explore Keboola Storage tables via direct API calls",
-	"version": "2.6.1",
+	"version": "2.6.2",
 	"publisher": "keboola",
 	"engines": {
 		"vscode": "^1.74.0"

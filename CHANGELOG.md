@@ -5,6 +5,74 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.2] - 2025-01-21
+
+### 🐛 FIXED: Schema Export Functionality
+- **FIXED: Export Schema Only Button**: Removed invalid `--format json` flags from all KBC CLI commands
+- **CLI Command Corrections**: Fixed "Unknown flag: --format" errors in schema export operations
+- **Table Schema Export**: `kbc remote table detail` now works without invalid flags
+- **Bucket Schema Export**: `kbc remote bucket detail` and `kbc remote table list` fixed
+- **Stage Schema Export**: `kbc remote bucket list` command corrected
+
+### 🔧 KBC CLI Command Fixes
+#### **Problem Identified:**
+```bash
+❌ kbc remote table detail <table> --format json    # Invalid flag
+❌ kbc remote bucket detail <bucket> --format json  # Invalid flag  
+❌ kbc remote table list --format json              # Invalid flag
+❌ kbc remote bucket list --format json             # Invalid flag
+```
+
+#### **Solution Implemented:**
+```bash
+✅ kbc remote table detail <table>     # JSON output by default
+✅ kbc remote bucket detail <bucket>   # JSON output by default
+✅ kbc remote table list               # JSON output by default  
+✅ kbc remote bucket list              # JSON output by default
+```
+
+### 🎯 Export Schema Operations Now Work
+- **Table Schema Export**: ✅ Creates `.schema.json` with table metadata, columns, and properties
+- **Bucket Schema Export**: ✅ Creates `.schema.json` with bucket info and table list
+- **Stage Schema Export**: ✅ Creates `.schema.json` with stage structure and bucket details
+- **CLI Compatibility**: ✅ Uses only valid KBC CLI commands and flags
+
+### 📋 Schema File Contents
+#### **Table Schema (.schema.json):**
+```json
+{
+  "table": {
+    "id": "in.c-main.customers",
+    "name": "customers", 
+    "displayName": "Customers",
+    "bucket": {...},
+    "created": "2025-01-21T10:00:00Z",
+    "rowsCount": 1500,
+    "dataSizeBytes": 2048576
+  },
+  "columns": [...],
+  "metadata": {...},
+  "exportedAt": "2025-01-21T15:30:00Z",
+  "exportedBy": "Keboola Storage Explorer"
+}
+```
+
+### 🔧 Technical Details
+- **Fixed Commands**: 5 different CLI command invocations corrected
+- **Affected Functions**: `exportTableSchema`, `exportBucketSchema`, `exportStageSchema`
+- **JSON Output**: KBC CLI outputs JSON by default for detail and list commands
+- **Error Resolution**: "Unknown flag: --format" errors eliminated across all schema operations
+
+### 💡 Root Cause
+- **Invalid Flag Usage**: `--format json` flag doesn't exist in Keboola CLI
+- **Assumption Error**: Assumed explicit JSON format flag was needed
+- **CLI Behavior**: KBC commands output JSON format by default for API data
+- **Multiple Functions**: Error was replicated across all schema export functions
+
+**Schema export buttons now work correctly without CLI flag errors!** 📋✅
+
+---
+
 ## [2.6.1] - 2025-01-21
 
 ### 🔧 Enhanced Message Display Duration
