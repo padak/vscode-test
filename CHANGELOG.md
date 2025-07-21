@@ -5,7 +5,153 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.8.1] - 2025-01-21
+## [3.0.0] - 2025-07-21
+
+### 🎉 MAJOR RELEASE: AI Data Platform with Configurations Management
+- **🆕 NEW: Complete Configurations Section** - Browse branches, components, and configurations alongside existing Storage Explorer
+- **🌿 Branch Explorer**: Browse all development branches with "Main Branch" identification for default branches
+- **📁 Component Categories**: Organized view of Extractors, Writers, Transformations, Sandboxes, Data Apps, and Flows
+- **📝 JSON Configuration Viewer**: Open configurations in VS Code's read-only JSON editor with syntax highlighting
+- **🎨 Rich Metadata Panels**: Beautiful HTML panels showing branch details and configuration metadata
+- **⚡ Unified Interface**: Storage and Configurations in the same Activity Bar view with shared API client
+
+### ✨ Added - New Configurations Management
+- **ConfigurationsTreeProvider.ts**: New tree provider for hierarchical configuration browsing
+- **ConfigurationsPanel.ts**: WebView panel component for displaying branch and configuration details
+- **Branch API Integration**: `listBranches()`, `getBranchDetail()`, and `listComponents()` methods in KeboolaApi
+- **Configuration Detail API**: `getConfigurationDetail()` for fetching complete configuration data
+- **Component Categorization**: Smart categorization logic mapping component types to predefined categories
+- **Lazy Loading**: Performance-optimized loading of components and configurations on-demand
+- **New Commands**: `keboola.refreshConfigurations`, `keboola.showBranch`, `keboola.showConfiguration`
+- **Context Menu Integration**: Right-click actions for branches and configurations
+- **Command Palette**: "Keboola: Refresh Configurations", "Keboola: Show Branch Details", "Keboola: Show Configuration"
+
+### 🏗️ Enhanced Architecture
+- **Shared API Client**: Single KeboolaApi instance for both Storage and Configurations sections
+- **Integrated Tree View**: KeboolaTreeProvider manages both Storage and Configurations sections
+- **Delegation Pattern**: Configurations logic delegated to specialized ConfigurationsTreeProvider
+- **Type Safety**: Comprehensive TypeScript interfaces for all new data structures
+- **Error Handling**: Graceful error handling without breaking existing Storage functionality
+- **Memory Efficiency**: Smart caching of components per branch with cache invalidation
+
+### 🔧 Enhanced Components
+#### **KeboolaApi.ts Extensions:**
+- **New Interfaces**: KeboolaBranch, KeboolaBranchDetail, KeboolaComponent, KeboolaConfiguration, KeboolaConfigurationDetail
+- **Branch Operations**: Complete branch management and detail fetching
+- **Component Operations**: Component listing with configuration data
+- **Type Normalization**: `normalizeComponentType()` for consistent categorization
+
+#### **KeboolaTreeProvider.ts Updates:**
+- **Dual Section Support**: Root level shows both "Storage" and "Configurations" sections
+- **Async getChildren()**: Updated to handle asynchronous configuration tree operations
+- **Configuration Delegation**: Seamless delegation to ConfigurationsTreeProvider for configuration nodes
+- **Extended TreeItem**: Added branch, category, component, and configuration properties
+
+#### **Extension.ts Enhancements:**
+- **New Command Handlers**: `showBranchDetails()` and `showConfigurationDetails()` functions
+- **Configuration JSON Editor**: Opens configuration JSON in new read-only editor tabs
+- **Panel Integration**: ConfigurationsPanel for rich metadata display
+- **Error Management**: Comprehensive error handling for all new operations
+
+### 🎯 Configuration Workflow
+#### **Branch Explorer:**
+```
+📋 Configurations
+├── ⭐ Main Branch (default branch)
+├── 🌿 feature-branch-1
+└── 🌿 development-branch
+```
+
+#### **Component Categories per Branch:**
+```
+⭐ Main Branch
+├── 📥 Extractors (3 components)
+├── 📤 Writers (2 components)
+├── ⚙️ Transformations (5 components)
+├── 🖥️ Sandboxes (1 component)
+├── 🚀 Data Apps (0 components)
+└── 🔄 Flows (2 components)
+```
+
+#### **Configuration Access:**
+- **Click Configuration**: Opens JSON in new read-only editor tab
+- **Click Branch**: Shows branch details panel with metadata
+- **Refresh**: Updates entire configuration tree with latest data
+
+### 🎨 UI/UX Enhancements
+- **Consistent Design**: Same visual styling as Storage Explorer with VS Code theme integration
+- **Icon Integration**: Component icons from Keboola API (ico32/ico64) with fallback theme icons
+- **Progressive Disclosure**: Collapsible tree structure with lazy loading
+- **Context Actions**: Inline buttons and context menus for common operations
+- **Status Indicators**: Visual distinction between default and feature branches
+- **Loading States**: Proper loading indicators and error states throughout
+
+### 📊 Metadata Display
+#### **Branch Detail Panel:**
+- **Branch Information**: Name, ID, creation date, creator details
+- **Default Branch Badge**: Visual indicator for main/default branches
+- **Metadata Table**: Key-value pairs from branch metadata
+- **Professional Styling**: Clean HTML layout with VS Code theme colors
+
+#### **Configuration Detail Panel:**
+- **Configuration Metadata**: Name, ID, version, creation details, change description
+- **Component Context**: Shows parent component and branch information
+- **JSON Editor Integration**: Displays raw configuration JSON in separate editor tab
+- **Export Information**: Tracks export method and API endpoints used
+
+### 🔧 Technical Implementation
+#### **API Integration:**
+- **Endpoint Coverage**: `/v2/storage/dev-branches`, `/v2/storage/branch/{branchId}/components`
+- **Error Resilience**: Graceful fallback when branches or components fail to load
+- **Caching Strategy**: Efficient component caching per branch with smart invalidation
+- **Type Safety**: Complete TypeScript coverage for all API responses
+
+#### **Performance Optimizations:**
+- **Lazy Loading**: Components loaded only when category expanded
+- **Smart Caching**: Branch-level component caching to minimize API calls
+- **Async Operations**: Non-blocking tree operations with proper loading states
+- **Memory Management**: Efficient data structures and cache cleanup
+
+### 📦 Package Updates
+- **Version**: Updated to 3.0.0 (major version for new feature set)
+- **Package Size**: 317KB (increased from 284KB due to new functionality)
+- **File Count**: 77 files (+4 new files for configurations)
+- **Dependencies**: No new external dependencies (leverages existing infrastructure)
+
+### 🛡️ Backward Compatibility & Safety
+- **Zero Breaking Changes**: All existing Storage Explorer functionality preserved
+- **Same Activity Icon**: Configurations appear in same sidebar panel as Storage
+- **Shared Settings**: Uses same API connection settings for both sections
+- **Read-Only Security**: All configuration access is read-only for safety
+- **Error Isolation**: Configuration errors don't affect Storage Explorer operations
+
+### 🎯 User Experience
+#### **Unified Workflow:**
+1. **Single Connection**: Configure API once, access Storage + Configurations
+2. **Side-by-Side**: Browse storage tables while reviewing configurations
+3. **Context Switching**: Seamlessly switch between data and configuration views
+4. **Command Access**: All operations available via tree, context menus, and Command Palette
+
+#### **Developer Benefits:**
+- **Configuration Review**: Inspect component configurations directly in VS Code
+- **Branch Comparison**: Switch between branches to compare configurations
+- **JSON Editing**: Familiar VS Code JSON editor with syntax highlighting
+- **Integration Ready**: Foundation for future configuration editing capabilities
+
+### 💡 Future-Proof Architecture
+- **Extensible Design**: Clear separation allows easy addition of new configuration features
+- **API Evolution**: Flexible interfaces ready for new Keboola API endpoints
+- **UI Consistency**: Established patterns for future Storage and Configuration enhancements
+- **Configuration Management**: Foundation for potential configuration editing in future versions
+
+### 🌟 Version 3.0.0 Impact
+This major release transforms the extension from a **Storage Explorer** to a complete **AI Data Platform interface**, providing unified access to both data storage and project configurations. The addition of comprehensive configuration management capabilities makes this an essential tool for Keboola developers and data engineers managing complex data pipelines and project configurations.
+
+**The extension now provides complete visibility into both your data storage and project configurations in a single, unified VS Code interface!** 🎉✨
+
+---
+
+## [2.8.1] - 2025-07-21
 
 ### 🎯 UI/UX FIX: Settings Message Positioning
 - **FIXED: Message Container Location** - Export settings confirmation messages now appear in the "Row Limits & Export Settings" section instead of near the API token
@@ -18,7 +164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLEAR SEPARATION:** Connection test results remain near Test Connection button
 - **BETTER UX:** Users see feedback exactly where they expect it
 
-## [2.8.0] - 2025-01-21
+## [2.8.0] - 2025-07-21
 
 ### 🔧 NEW FEATURE: Configurable Table Naming
 - **NEW SETTING: "Use short table names"** - Export tables with clean names (e.g., "weather.csv" instead of "in.c-data.weather.csv")
@@ -38,7 +184,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **VISUAL INDICATORS:** All detail panels display current naming convention
 - **CONSISTENT UI:** Table naming setting grouped with other export preferences
 
-## [2.7.1] - 2025-01-21
+## [2.7.1] - 2025-07-21
 
 ### 🐛 FIXED: Schema Export Directory Creation
 - **FIXED: "ENOENT: no such file or directory"** error when exporting metadata
@@ -102,7 +248,7 @@ workspace/
 
 ---
 
-## [2.7.0] - 2025-01-21
+## [2.7.0] - 2025-07-21
 
 ### 🚀 MAJOR: Workspace-Based Export System
 - **NEW: Export Folder Setting** - Configure export destination relative to workspace root
@@ -263,7 +409,7 @@ const finalPath = path.join(workspaceRoot, exportFolder, stage, bucket, `${table
 
 ---
 
-## [2.6.5] - 2025-01-21
+## [2.6.5] - 2025-07-21
 
 ### 🐛 FIXED: Table Detail Display Issues
 - **FIXED: Column names showing as "undefined"** in table detail view
@@ -340,7 +486,7 @@ this.updateContent(); // ✅ Regenerates HTML with new data
 
 ---
 
-## [2.6.4] - 2025-01-21
+## [2.6.4] - 2025-07-21
 
 ### 🏷️ UI: Renamed Export Button Text
 - **RENAMED: "Export Schema Only" → "Export Table Metadata"** across all panels
@@ -397,7 +543,7 @@ this.updateContent(); // ✅ Regenerates HTML with new data
 
 ---
 
-## [2.6.3] - 2025-01-21
+## [2.6.3] - 2025-07-21
 
 ### 🔄 MAJOR UPGRADE: Schema Export Using Keboola Storage API
 - **SWITCHED FROM CLI TO API**: Schema export now uses direct Keboola Storage API calls instead of problematic CLI
@@ -513,7 +659,7 @@ this.updateContent(); // ✅ Regenerates HTML with new data
 
 ---
 
-## [2.6.2] - 2025-01-21
+## [2.6.2] - 2025-07-21
 
 ### 🐛 FIXED: Schema Export Functionality
 - **FIXED: Export Schema Only Button**: Removed invalid `--format json` flags from all KBC CLI commands
@@ -581,7 +727,7 @@ this.updateContent(); // ✅ Regenerates HTML with new data
 
 ---
 
-## [2.6.1] - 2025-01-21
+## [2.6.1] - 2025-07-21
 
 ### 🔧 Enhanced Message Display Duration
 - **Extended Message Timeout**: Test Connection messages now display 2 seconds longer
@@ -616,7 +762,7 @@ const timeout = type === 'success' ? 10000 : 12000; // 10s success, 12s error
 
 ---
 
-## [2.6.0] - 2025-01-21
+## [2.6.0] - 2025-07-21
 
 ### 🎯 FIXED: Test Connection Message Display
 - **FIXED: Message Positioning**: Test Connection results now appear right below the button instead of at top of panel
@@ -702,7 +848,7 @@ const timeout = type === 'success' ? 10000 : 12000; // 10s success, 12s error
 
 ---
 
-## [2.5.6] - 2025-01-21
+## [2.5.6] - 2025-07-21
 
 ### 🔧 Debug Build - Test Connection Investigation
 - **Enhanced Debug Logging**: Added comprehensive console.log messages throughout Test Connection workflow
@@ -729,7 +875,7 @@ const timeout = type === 'success' ? 10000 : 12000; // 10s success, 12s error
 
 ---
 
-## [2.5.4] - 2025-01-21
+## [2.5.4] - 2025-07-21
 
 ### 🔐 Enhanced Connection Testing
 - **FIXED: Test Connection Button**: Now properly validates API tokens using Keboola Token Verification endpoint
@@ -827,7 +973,7 @@ async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: stri
 
 ---
 
-## [2.5.3] - 2025-01-21
+## [2.5.3] - 2025-07-21
 
 ### 🎨 UI Consistency & Enhancement
 - **FIXED: Actions Section Position**: Moved actions to top of bucket and stage detail panels (consistent with table detail)
@@ -904,7 +1050,7 @@ async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: stri
 
 ---
 
-## [2.5.2] - 2025-01-21
+## [2.5.2] - 2025-07-21
 
 ### 🐛 Critical Fix: Empty Table Export Handling
 - **FIXED: KBC CLI Bug with Empty Tables**: Resolved "Error: Max must be greater than 0" when exporting empty tables
@@ -985,7 +1131,7 @@ async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: stri
 
 ---
 
-## [2.5.1] - 2025-01-21
+## [2.5.1] - 2025-07-21
 
 ### 🐛 Critical Fix: Stage Export Functionality
 - **FIXED: Stage Export Commands**: Resolved "Unknown flag: --format" error in stage exports
@@ -1053,7 +1199,7 @@ async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: stri
 
 ---
 
-## [2.5.0] - 2025-01-21
+## [2.5.0] - 2025-07-21
 
 ### 🚀 Major Feature: Complete Stage Detail & Export System
 - **NEW: StageDetailPanel Component**: Comprehensive stage overview with statistics, bucket listings, and export actions
@@ -1171,7 +1317,7 @@ This release completes the hierarchical export system:
 
 ---
 
-## [2.4.4] - 2025-01-21
+## [2.4.4] - 2025-07-21
 
 ### 🐛 Output Panel Logging Fix
 - **FIXED: Missing Output Panel in Bucket Exports**: Output channel now properly shows during bucket exports
@@ -1229,7 +1375,7 @@ This release completes the hierarchical export system:
 
 ---
 
-## [2.4.3] - 2025-01-21
+## [2.4.3] - 2025-07-21
 
 ### 🐛 Critical Fix
 - **FIXED: Bucket Export Functionality**: Resolved "Unknown flag: --bucket-id" error in bucket exports
@@ -1278,7 +1424,7 @@ This release completes the hierarchical export system:
 
 ---
 
-## [2.4.2] - 2025-01-21
+## [2.4.2] - 2025-07-21
 
 ### 🚀 UI Enhancement
 - **Bucket Export UI**: Added missing action buttons to BucketDetailPanel for accessing existing export functionality
@@ -1331,7 +1477,7 @@ This release completes the hierarchical export system:
 
 ---
 
-## [2.4.1] - 2025-01-21
+## [2.4.1] - 2025-07-21
 
 ### 🐛 Critical Fixes
 - **Enhanced Export Logging**: Output panel now automatically opens during exports for better visibility
@@ -1384,7 +1530,7 @@ This release completes the hierarchical export system:
 
 ---
 
-## [2.4.0] - 2025-01-21
+## [2.4.0] - 2025-07-21
 
 ### 🚀 Major Features
 - **Unlimited Export Support**: Set row limit to 0 for unlimited exports (no --limit flag)
@@ -1475,7 +1621,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.3.1] - 2025-01-21
+## [2.3.1] - 2025-07-21
 
 ### 🐛 Critical Fix
 - **Fixed CLI Export Commands**: Corrected KBC CLI flags for table exports
@@ -1492,7 +1638,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.3.0] - 2025-01-21
+## [2.3.0] - 2025-07-21
 
 ### 🚀 Major Features
 - **Dual Row Limits**: Separate preview (100) and export (2000) row limits for optimized performance
@@ -1564,7 +1710,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.2.0] - 2025-01-21
+## [2.2.0] - 2025-07-21
 
 ### 🚀 Major Features
 - **New Settings Panel**: Complete in-extension settings UI with cloud provider selection
@@ -1621,7 +1767,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.1.4] - 2025-01-21
+## [2.1.4] - 2025-07-21
 
 ### 🐛 Fixed
 - **CRITICAL**: Fixed tree view registration for custom activity bar container
@@ -1637,7 +1783,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.1.3] - 2025-01-21
+## [2.1.3] - 2025-07-21
 
 ### 🐛 Fixed
 - **CRITICAL**: Fixed Keboola logo display in VS Code activity bar
@@ -1652,7 +1798,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.1.2] - 2025-01-21
+## [2.1.2] - 2025-07-21
 
 ### 🐛 Fixed
 - **CRITICAL**: Restored actual Keboola logo in VS Code activity bar
@@ -1666,7 +1812,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.1.1] - 2025-01-21
+## [2.1.1] - 2025-07-21
 
 ### 🐛 Fixed
 - **CRITICAL**: Restored Keboola Storage icon in VS Code activity bar
@@ -1680,7 +1826,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.1.0] - 2025-01-21
+## [2.1.0] - 2025-07-21
 
 ### 🚀 Major Features
 - **Preview Opens in Editor Tab**: Table preview now opens CSV data in a new VS Code editor tab with syntax highlighting instead of inline WebView display
@@ -1725,7 +1871,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.9] - 2025-01-21
+## [2.0.9] - 2025-07-21
 
 ### ✨ Added
 - Enhanced table detail panel with real export functionality
@@ -1744,7 +1890,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.8] - 2025-01-21
+## [2.0.8] - 2025-07-21
 
 ### ✨ Added
 - Table detail panel with metadata display
@@ -1765,7 +1911,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.7] - 2025-01-21
+## [2.0.7] - 2025-07-21
 
 ### ✨ Added
 - Bucket detail panels with table listings
@@ -1779,7 +1925,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.6] - 2025-01-21
+## [2.0.6] - 2025-07-21
 
 ### ✨ Added
 - Real API integration with Keboola Storage API
@@ -1793,7 +1939,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.5] - 2025-01-21
+## [2.0.5] - 2025-07-21
 
 ### 🔧 Changed
 - Core functionality improvements
@@ -1801,7 +1947,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.4] - 2025-01-21
+## [2.0.4] - 2025-07-21
 
 ### 🔧 Changed
 - Foundation updates and improvements
@@ -1809,7 +1955,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.3] - 2025-01-21
+## [2.0.3] - 2025-07-21
 
 ### 🔧 Changed
 - Development infrastructure improvements
@@ -1817,7 +1963,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.2] - 2025-01-21
+## [2.0.2] - 2025-07-21
 
 ### 🔧 Changed
 - Project structure improvements
@@ -1825,7 +1971,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.1] - 2025-01-21
+## [2.0.1] - 2025-07-21
 
 ### 🔧 Changed
 - Initial release preparations
@@ -1833,7 +1979,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 
 ---
 
-## [2.0.0] - 2025-01-21
+## [2.0.0] - 2025-07-21
 
 ### 🚀 Initial Release
 - **NEW**: Keboola Storage API Explorer extension for VS Code
