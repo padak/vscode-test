@@ -19,6 +19,7 @@ interface SettingsData {
     exportRowLimit: number;
     includeHeaders: boolean;
     exportFolderName: string;
+    useShortTableNames: boolean;
     lastUsed?: string;
 }
 
@@ -135,7 +136,7 @@ export class SettingsPanel {
                         await this.handleTokenSave(message.token);
                         break;
                     case 'saveExportSettings':
-                        await this.handleExportSettingsSave(message.exportRowLimit, message.includeHeaders, message.exportFolderName);
+                        await this.handleExportSettingsSave(message.exportRowLimit, message.includeHeaders, message.exportFolderName, message.useShortTableNames);
                         break;
                     case 'savePreviewSettings':
                         await this.handlePreviewSettingsSave(message.previewRowLimit);
@@ -240,14 +241,15 @@ export class SettingsPanel {
         }
     }
 
-    private async handleExportSettingsSave(exportRowLimit: number, includeHeaders: boolean, exportFolderName: string): Promise<void> {
+    private async handleExportSettingsSave(exportRowLimit: number, includeHeaders: boolean, exportFolderName: string, useShortTableNames: boolean): Promise<void> {
         try {
             // Validate export row limit (0 = unlimited is allowed)
             if (exportRowLimit < 0 || exportRowLimit > 10000000) {
                 this.panel.webview.postMessage({
                     command: 'showMessage',
                     type: 'error',
-                    text: 'Export row limit must be 0 (unlimited) or between 1 and 10,000,000'
+                    text: 'Export row limit must be 0 (unlimited) or between 1 and 10,000,000',
+                    container: 'exportMessageContainer'
                 });
                 return;
             }
@@ -257,7 +259,8 @@ export class SettingsPanel {
                 this.panel.webview.postMessage({
                     command: 'showMessage',
                     type: 'error',
-                    text: 'Export folder name cannot be empty'
+                    text: 'Export folder name cannot be empty',
+                    container: 'exportMessageContainer'
                 });
                 return;
             }
@@ -266,22 +269,26 @@ export class SettingsPanel {
             await this.context.globalState.update('keboola.exportRowLimit', exportRowLimit);
             await this.context.globalState.update('keboola.includeHeaders', includeHeaders);
             await this.context.globalState.update('keboola.exportFolderName', exportFolderName.trim());
+            await this.context.globalState.update('keboola.useShortTableNames', useShortTableNames);
             
             const limitText = exportRowLimit === 0 ? 'unlimited' : exportRowLimit.toLocaleString();
             const headersText = includeHeaders ? 'included' : 'excluded';
+            const namingText = useShortTableNames ? 'short names' : 'full names';
             
             // Show feedback
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'success',
-                text: `Export settings saved! Folder: "${exportFolderName.trim()}", Limit: ${limitText}, Headers: ${headersText}`
+                text: `Export settings saved! Folder: "${exportFolderName.trim()}", Limit: ${limitText}, Headers: ${headersText}, Table names: ${namingText}`,
+                container: 'exportMessageContainer'
             });
 
         } catch (error) {
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'error',
-                text: `Failed to save export settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `Failed to save export settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'exportMessageContainer'
             });
         }
     }
@@ -356,6 +363,7 @@ export class SettingsPanel {
             exportRowLimit: this.context.globalState.get<number>('keboola.exportRowLimit') || 2000,
             includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true,
             exportFolderName: this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project',
+            useShortTableNames: this.context.globalState.get<boolean>('keboola.useShortTableNames') ?? false,
             lastUsed: this.context.globalState.get<string>('keboola.lastUsedUrl')
         };
     }
@@ -621,7 +629,7 @@ export class SettingsPanel {
                     background-color: var(--vscode-button-secondaryHoverBackground);
                 }
                 
-                #messageContainer {
+                #connectionMessageContainer, #exportMessageContainer {
                     position: relative;
                     z-index: 1000;
                     margin: 10px 0;
@@ -727,8 +735,8 @@ export class SettingsPanel {
                         <button class="button secondary" onclick="testConnection()" id="testConnectionBtn">🔧 Test Connection</button>
                     </div>
                     
-                    <!-- Message container right after the Test Connection button -->
-                    <div id="messageContainer" style="margin-top: 15px;"></div>
+                    <!-- Message container for connection testing -->
+                    <div id="connectionMessageContainer" style="margin-top: 15px;"></div>
                 </div>
                 
                 <div class="section">
@@ -783,7 +791,18 @@ export class SettingsPanel {
                                 <label class="checkbox-label" for="includeHeadersInput">Include headers by default</label>
                             </div>
                             
+                            <div class="checkbox-group">
+                                <input type="checkbox" 
+                                       id="useShortTableNamesInput" 
+                                       class="checkbox-input"
+                                       ${settings.useShortTableNames ? 'checked' : ''}>
+                                <label class="checkbox-label" for="useShortTableNamesInput">Use short table names (e.g., "weather.csv" instead of "in.c-data.weather.csv")</label>
+                            </div>
+                            
                             <button class="button" onclick="saveExportSettings()">💾 Save Export Settings</button>
+                            
+                            <!-- Message container for export settings -->
+                            <div id="exportMessageContainer" style="margin-top: 15px;"></div>
                         </div>
                     </div>
                     
@@ -836,14 +855,15 @@ export class SettingsPanel {
                     const exportRowLimit = parseInt(document.getElementById('exportRowLimitInput').value);
                     const includeHeaders = document.getElementById('includeHeadersInput').checked;
                     const exportFolderName = document.getElementById('exportFolderNameInput').value.trim();
+                    const useShortTableNames = document.getElementById('useShortTableNamesInput').checked;
                     
                     if (isNaN(exportRowLimit) || exportRowLimit < 0) {
-                        showMessage('error', 'Please enter a valid export row limit (0 = unlimited, or 1-10,000,000)');
+                        showMessage('error', 'Please enter a valid export row limit (0 = unlimited, or 1-10,000,000)', 'exportMessageContainer');
                         return;
                     }
                     
                     if (!exportFolderName) {
-                        showMessage('error', 'Export folder name cannot be empty');
+                        showMessage('error', 'Export folder name cannot be empty', 'exportMessageContainer');
                         return;
                     }
                     
@@ -851,7 +871,8 @@ export class SettingsPanel {
                         command: 'saveExportSettings',
                         exportRowLimit: exportRowLimit,
                         includeHeaders: includeHeaders,
-                        exportFolderName: exportFolderName
+                        exportFolderName: exportFolderName,
+                        useShortTableNames: useShortTableNames
                     });
                 }
                 
@@ -867,7 +888,7 @@ export class SettingsPanel {
                         
                         // Clear any existing messages after 1 second before starting test
                         setTimeout(() => {
-                            const container = document.getElementById('messageContainer');
+                            const container = document.getElementById('connectionMessageContainer');
                             if (container) {
                                 container.innerHTML = '';
                             }
@@ -882,11 +903,11 @@ export class SettingsPanel {
                     }
                 }
                 
-                function showMessage(type, text) {
-                    const container = document.getElementById('messageContainer');
+                function showMessage(type, text, containerId = 'connectionMessageContainer') {
+                    const container = document.getElementById(containerId);
                     
                     if (!container) {
-                        console.error('messageContainer not found!');
+                        console.error(\`Message container '\${containerId}' not found!\`);
                         return;
                     }
                     
@@ -927,7 +948,7 @@ export class SettingsPanel {
                     const message = event.data;
                     switch (message.command) {
                         case 'showMessage':
-                            showMessage(message.type, message.text);
+                            showMessage(message.type, message.text, message.container);
                             break;
                     }
                 });

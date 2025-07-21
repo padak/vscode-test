@@ -5,6 +5,39 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.1] - 2025-01-21
+
+### 🎯 UI/UX FIX: Settings Message Positioning
+- **FIXED: Message Container Location** - Export settings confirmation messages now appear in the "Row Limits & Export Settings" section instead of near the API token
+- **IMPROVED: Message Targeting** - Separate message containers for connection testing vs. export settings
+- **ENHANCED: User Feedback** - Messages appear contextually where the action was performed
+- **TECHNICAL: Dual Message System** - `connectionMessageContainer` for API testing, `exportMessageContainer` for export settings
+
+### 🔧 Message System Improvements
+- **CONTEXTUAL POSITIONING:** Export confirmations show directly under export settings
+- **CLEAR SEPARATION:** Connection test results remain near Test Connection button
+- **BETTER UX:** Users see feedback exactly where they expect it
+
+## [2.8.0] - 2025-01-21
+
+### 🔧 NEW FEATURE: Configurable Table Naming
+- **NEW SETTING: "Use short table names"** - Export tables with clean names (e.g., "weather.csv" instead of "in.c-data.weather.csv")
+- **UI ENHANCEMENT:** Added checkbox in Settings Panel for table naming preference
+- **SMART FILENAME LOGIC:** `extractTableName()` utility extracts clean table names from full IDs
+- **CONTEXTUAL DISPLAY:** All detail panels now show current table naming setting (Short/Full)
+- **WORKSPACE INTEGRATION:** Updated `constructExportPath()` to respect naming preference
+- **DEFAULT SETTING:** Short names disabled by default (maintains current behavior)
+
+### 📂 Export Directory Structure
+- **MAINTAINED:** Directory structure still provides full context (stage/bucket/)
+- **CLEANER FILES:** Table files can now have user-friendly names while preserving organization
+- **SETTING PERSISTENCE:** Table naming preference saved per connection in global state
+
+### 🎯 User Experience Improvements
+- **CLEAR FEEDBACK:** Settings panel shows "Table names: short names/full names" in success message
+- **VISUAL INDICATORS:** All detail panels display current naming convention
+- **CONSISTENT UI:** Table naming setting grouped with other export preferences
+
 ## [2.7.1] - 2025-01-21
 
 ### 🐛 FIXED: Schema Export Directory Creation

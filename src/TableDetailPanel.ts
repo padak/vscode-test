@@ -518,7 +518,8 @@ export class TableDetailPanel {
                         Export Folder: <strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong> | 
                         Preview: <strong>${this.previewRowLimit.toLocaleString()}</strong> rows | 
                         Export: <strong>${this.exportRowLimit === 0 ? 'unlimited' : this.exportRowLimit.toLocaleString()}</strong> rows | 
-                        Headers: <strong>${this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</strong>
+                        Headers: <strong>${this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</strong> | 
+                        Table names: <strong>${this.context.globalState.get<boolean>('keboola.useShortTableNames') ?? false ? 'Short' : 'Full'}</strong>
                         <br><small>Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong>/${this.tableDetail.bucket.stage}/${this.tableDetail.bucket.id.split('.').slice(1).join('.')}/</small>
                     </div>
                 </div>

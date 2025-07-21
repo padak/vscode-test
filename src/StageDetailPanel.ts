@@ -437,6 +437,10 @@ export class StageDetailPanel {
                             <span class="setting-label">Headers:</span>
                             <span class="setting-value">${this.context?.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</span>
                         </div>
+                        <div class="settings-row">
+                            <span class="setting-label">Table names:</span>
+                            <span class="setting-value">${this.context?.globalState.get<boolean>('keboola.useShortTableNames') ?? false ? 'Short' : 'Full'}</span>
+                        </div>
                         <div class="settings-note">
                             <small>💡 Use "Keboola: Settings" to change these defaults. Export operations will prompt to override these values.</small>
                         </div>

@@ -19,6 +19,8 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.8.1   | 284KB     | 2025-01-21   | FIXED: Export settings messages now appear in correct section (not near API token) |
+| 2.8.0   | 282KB     | 2025-01-21   | NEW: Configurable table naming (short names like "weather.csv" vs full "in.c-data.weather.csv") |
 | 2.7.0   | 275KB     | 2025-01-21   | MAJOR: Workspace-based exports (no file dialogs, automatic directory structure) |
 | 2.6.5   | 269KB     | 2025-01-21   | FIXED: Column display (undefined names) and blank refresh tab issues |
 | 2.6.4   | 268KB     | 2025-01-21   | UI: Renamed "Export Schema Only" → "Export Table Metadata" buttons |

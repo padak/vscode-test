@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getOutputChannel } from './extension';
-import { constructExportPath, constructBucketExportPath, constructStageExportPath, ensureDirectoryExists, extractStage, extractBucketId, getExportFolderName } from './workspaceUtils';
+import { constructExportPath, constructBucketExportPath, constructStageExportPath, ensureDirectoryExists, extractStage, extractBucketId, getExportFolderName, getUseShortTableNames } from './workspaceUtils';
 
 export class KbcCliError extends Error {
     constructor(message: string, public readonly exitCode?: number) {
@@ -275,10 +275,11 @@ export async function exportTable(
             
             // Construct workspace export path
             const exportFolderName = getExportFolderName(context);
+            const useShortTableNames = getUseShortTableNames(context);
             const stage = extractStage(tableId);
             const bucketId = extractBucketId(tableId);
             
-            const outputPath = constructExportPath(exportFolderName, stage, bucketId, tableId);
+            const outputPath = constructExportPath(exportFolderName, stage, bucketId, tableId, undefined, useShortTableNames);
             if (!outputPath) {
                 throw new Error('No workspace folder found. Please open a workspace to export data.');
             }

@@ -22,7 +22,8 @@ export function constructExportPath(
     stage: string,
     bucketId: string,
     tableId: string,
-    fileName?: string
+    fileName?: string,
+    useShortTableNames?: boolean
 ): string | undefined {
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot) {
@@ -33,7 +34,16 @@ export function constructExportPath(
     const bucketName = bucketId.includes('.') ? bucketId.split('.').slice(1).join('.') : bucketId;
     
     // Use provided fileName or construct from tableId
-    const finalFileName = fileName || `${tableId.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
+    let finalFileName = fileName;
+    if (!finalFileName) {
+        if (useShortTableNames) {
+            // Use only the table name (e.g., "weather.csv" from "in.c-data.weather")
+            finalFileName = `${extractTableName(tableId)}.csv`;
+        } else {
+            // Use full table ID (e.g., "in.c-data.weather.csv")
+            finalFileName = `${tableId.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
+        }
+    }
     
     return path.join(workspaceRoot, exportFolderName, stage, bucketName, finalFileName);
 }
@@ -103,4 +113,20 @@ export function extractBucketId(tableId: string): string {
  */
 export function getExportFolderName(context: vscode.ExtensionContext): string {
     return context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+}
+
+/**
+ * Get whether to use short table names from settings
+ */
+export function getUseShortTableNames(context: vscode.ExtensionContext): boolean {
+    return context.globalState.get<boolean>('keboola.useShortTableNames') ?? false;
+}
+
+/**
+ * Extract table name from table ID
+ * Examples: "in.c-data.weather" -> "weather", "out.c-main.users" -> "users"
+ */
+export function extractTableName(tableId: string): string {
+    const parts = tableId.split('.');
+    return parts.length >= 3 ? parts.slice(2).join('.') : tableId;
 } 
