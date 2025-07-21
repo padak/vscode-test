@@ -142,7 +142,8 @@
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./"
+		"watch": "tsc -watch -p ./",
+		"package": "npm run compile && vsce package --out builds/"
 	},
 	"devDependencies": {
 		"@types/node": "16.x",
