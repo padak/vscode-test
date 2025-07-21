@@ -5,6 +5,41 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2025-01-21
+
+### 🔧 Enhanced Message Display Duration
+- **Extended Message Timeout**: Test Connection messages now display 2 seconds longer
+- **Success Messages**: Increased from 8 seconds to 10 seconds (+2s)
+- **Error Messages**: Increased from 10 seconds to 12 seconds (+2s)
+- **Better Reading Time**: More time to review connection results, project details, and token information
+
+### 💡 User Experience Improvement
+- **Enhanced Readability**: Users have more time to read detailed connection feedback
+- **Project Information**: Extra time to review project name, token description, and expiration date
+- **Error Analysis**: Additional time to understand and act on connection errors
+- **Reduced Rush**: Less pressure to quickly read auto-hiding messages
+
+### ⏱️ Timeout Changes
+#### **Before (v2.6.0):**
+```javascript
+const timeout = type === 'success' ? 8000 : 10000; // 8s success, 10s error
+```
+
+#### **After (v2.6.1):**
+```javascript
+const timeout = type === 'success' ? 10000 : 12000; // 10s success, 12s error
+```
+
+### 📦 Technical Details
+- **Extension Size**: 264.84KB (77 files)
+- **Change Location**: `showMessage()` function timeout values in SettingsPanel.ts
+- **Maintained Functionality**: All other Test Connection features unchanged
+- **UI Consistency**: Message positioning and styling remain the same
+
+**Test Connection messages now stay visible longer for better user experience!** ⏱️✨
+
+---
+
 ## [2.6.0] - 2025-01-21
 
 ### 🎯 FIXED: Test Connection Message Display

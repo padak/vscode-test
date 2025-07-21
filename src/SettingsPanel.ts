@@ -867,8 +867,8 @@ export class SettingsPanel {
                     container.innerHTML = '';
                     container.appendChild(messageDiv);
                     
-                    // Auto-hide success messages after 8 seconds, errors after 10 seconds
-                    const timeout = type === 'success' ? 8000 : 10000;
+                    // Auto-hide success messages after 10 seconds, errors after 12 seconds
+                    const timeout = type === 'success' ? 10000 : 12000;
                     setTimeout(() => {
                         if (container.contains(messageDiv)) {
                             container.removeChild(messageDiv);

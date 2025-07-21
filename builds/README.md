@@ -19,6 +19,7 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.6.1   | 265KB     | 2025-01-21   | Extended message display duration (+2s for better readability) |
 | 2.6.0   | 264KB     | 2025-01-21   | FIXED: Test Connection message positioning (appears below button) |
 | 2.5.6   | 263KB     | 2025-01-21   | Debug enhancement for Test Connection investigation |
 | 2.5.5   | 263KB     | 2025-01-21   | Debug build for Test Connection troubleshooting (overwritten) |
@@ -60,10 +61,10 @@ builds/
 
 ## 🎯 Latest Build
 
-**Current Version:** `2.6.0`
-**File:** `keboola-storage-api-explorer-2.6.0.vsix`
-**Size:** 264KB
-**Features:** FIXED Test Connection message positioning - results appear right below button
+**Current Version:** `2.6.1`
+**File:** `keboola-storage-api-explorer-2.6.1.vsix`
+**Size:** 265KB
+**Features:** Extended Test Connection message display duration (10s success, 12s error)
 
 ## ⚙️ Build Configuration
 
