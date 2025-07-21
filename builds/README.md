@@ -19,6 +19,7 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.6.3   | 266KB     | 2025-01-21   | MAJOR: Schema export via Storage API (fixed CLI JSON parse errors) |
 | 2.6.2   | 264KB     | 2025-01-21   | FIXED: Schema export functionality (removed invalid --format flags) |
 | 2.6.1   | 265KB     | 2025-01-21   | Extended message display duration (+2s for better readability) |
 | 2.6.0   | 264KB     | 2025-01-21   | FIXED: Test Connection message positioning (appears below button) |
@@ -62,10 +63,10 @@ builds/
 
 ## 🎯 Latest Build
 
-**Current Version:** `2.6.2`
-**File:** `keboola-storage-api-explorer-2.6.2.vsix`
-**Size:** 264KB
-**Features:** FIXED Schema export functionality - removed invalid --format flags from KBC CLI commands
+**Current Version:** `2.6.3`
+**File:** `keboola-storage-api-explorer-2.6.3.vsix`
+**Size:** 266KB
+**Features:** MAJOR Schema export upgrade - switched from CLI to Storage API for comprehensive data
 
 ## ⚙️ Build Configuration
 

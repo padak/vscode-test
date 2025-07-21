@@ -203,7 +203,7 @@ export class TableDetailPanel {
             }, async (progress) => {
                 progress.report({ increment: 50, message: "Fetching table metadata..." });
 
-                const schemaPath = await exportTableSchema(this.tableDetail.id, cliOptions, outputDir);
+                const schemaPath = await exportTableSchema(this.tableDetail.id, cliOptions, outputDir, this.keboolaApi);
 
                 progress.report({ increment: 50, message: "Complete!" });
 

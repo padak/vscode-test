@@ -214,6 +214,20 @@ export class KeboolaApi {
     }
 
     /**
+     * Get raw table detail data from API (for comprehensive schema export)
+     */
+    async getRawTableDetail(tableId: string): Promise<any> {
+        try {
+            return await this.makeRequest(`/v2/storage/tables/${encodeURIComponent(tableId)}`);
+        } catch (error) {
+            if (error instanceof KeboolaApiError) {
+                throw error;
+            }
+            throw new KeboolaApiError(`Failed to get raw table detail: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
      * Get detailed information about a specific table
      */
     async getTableDetail(tableId: string): Promise<KeboolaTableDetail> {

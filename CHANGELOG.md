@@ -5,6 +5,122 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.3] - 2025-01-21
+
+### 🔄 MAJOR UPGRADE: Schema Export Using Keboola Storage API
+- **SWITCHED FROM CLI TO API**: Schema export now uses direct Keboola Storage API calls instead of problematic CLI
+- **COMPREHENSIVE SCHEMA DATA**: Export now includes all rich metadata from API (columnMetadata, attributes, bucket details)
+- **FIXED: JSON Parse Error**: Resolved "Unexpected token 'T'" error from CLI text output
+- **NEW: Enhanced Schema Structure**: Much more detailed schema files with complete table information
+
+### 📋 Schema Export Command Changes
+#### **Problem with KBC CLI:**
+```bash
+❌ kbc remote table detail in.c-new.domains
+# Output: "Table 'in.c-new.domains':" (Human-readable text, not JSON)
+# Result: JSON.parse() fails with "Unexpected token 'T'"
+```
+
+#### **Solution - Direct API Call:**
+```bash
+✅ GET /v2/storage/tables/in.c-new.domains
+# Output: Complete JSON with columnMetadata, attributes, bucket details
+# Result: Rich, structured schema export
+```
+
+### 🎯 New Schema Structure
+#### **Enhanced Table Schema (.schema.json):**
+```json
+{
+  "table": {
+    "uri": "https://connection.eu-central-1.keboola.com/v2/storage/tables/in.c-new.domains",
+    "id": "in.c-new.domains",
+    "name": "domains",
+    "displayName": "domains", 
+    "transactional": false,
+    "primaryKey": [],
+    "indexType": null,
+    "isAlias": false,
+    "isAliasable": true,
+    "isTyped": false,
+    "tableType": "table",
+    "path": "/107570-domains"
+  },
+  "statistics": {
+    "rowsCount": 60,
+    "dataSizeBytes": 3072,
+    "created": "2025-07-21T12:08:22+0200",
+    "lastImportDate": "2025-07-21T12:08:27+0200",
+    "lastChangeDate": "2025-07-21T12:08:27+0200"
+  },
+  "columns": {
+    "list": ["Domain_Name", "Domain_privacy_protection_status", "Domain_status_at_NC", "Domain_auto_renew_status", "Domain_expiration_date"],
+    "metadata": {
+      "Domain_Name": [
+        {
+          "id": "1614111389",
+          "key": "KBC.datatype.basetype", 
+          "value": "STRING",
+          "provider": "user",
+          "timestamp": "2025-07-21T14:34:30+0200"
+        },
+        {
+          "id": "1614111399",
+          "key": "KBC.description",
+          "value": "registered domain name",
+          "provider": "user", 
+          "timestamp": "2025-07-21T14:35:17+0200"
+        }
+      ]
+    }
+  },
+  "metadata": [...],
+  "attributes": [...],
+  "bucket": { /* Complete bucket information */ },
+  "export": {
+    "exportedAt": "2025-01-21T15:30:00Z",
+    "exportedBy": "Keboola Storage Explorer",
+    "exportMethod": "Storage API v2",
+    "apiEndpoint": "/v2/storage/tables/in.c-new.domains"
+  }
+}
+```
+
+### 🔧 Technical Implementation
+- **NEW: `getRawTableDetail()` method** in KeboolaApi for complete API data
+- **ENHANCED: Schema structure** with organized sections (table, statistics, columns, metadata, bucket)
+- **IMPROVED: Error handling** with specific API error messages
+- **DETAILED: Column metadata** including data types, lengths, descriptions
+- **COMPLETE: Bucket information** with all related metadata
+
+### 📊 Schema Content Comparison
+#### **Before (CLI - Failed):**
+```
+❌ Human-readable text output from CLI
+❌ Limited table information
+❌ No column metadata or types
+❌ JSON parsing errors
+```
+
+#### **After (API - Working):**
+```
+✅ Complete JSON response from Storage API
+✅ Rich table metadata and properties
+✅ Detailed column metadata with types and descriptions  
+✅ Full bucket information and attributes
+✅ Reliable JSON structure
+```
+
+### 🚀 User Experience Improvements
+- **Better Logging**: "📋 Fetching table schema via Keboola Storage API..."
+- **Schema Statistics**: Shows columns count, rows, and data size
+- **Export Metadata**: Tracks export method and API endpoint used
+- **Complete Data**: All information available in Keboola API included
+
+**Schema export now works reliably with comprehensive API data!** 📋✅
+
+---
+
 ## [2.6.2] - 2025-01-21
 
 ### 🐛 FIXED: Schema Export Functionality

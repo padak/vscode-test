@@ -402,35 +402,72 @@ export async function exportTable(
 export async function exportTableSchema(
     tableId: string, 
     options: KbcCliOptions,
-    outputDir: string
+    outputDir: string,
+    keboolaApi?: any  // KeboolaApi instance passed from caller
 ): Promise<string> {
     const outputChannel = getOutputChannel();
     
     try {
-        // Get table info
-        const tableInfoJson = await executeKbcCommand([
-            'remote', 'table', 'detail',
-            tableId
-        ], options);
+        if (!keboolaApi) {
+            throw new Error('KeboolaApi instance required for schema export');
+        }
 
-        const tableInfo = JSON.parse(tableInfoJson);
+        outputChannel.appendLine(`📋 Fetching table schema via Keboola Storage API...`);
         
-        // Create schema object
+        // Get raw API response for complete schema data (much richer than CLI)
+        const rawTableData = await keboolaApi.getRawTableDetail(tableId);
+        
+        // Create comprehensive schema object based on API structure
         const schema = {
+            // Table identification and basic info
             table: {
-                id: tableInfo.id,
-                name: tableInfo.name,
-                displayName: tableInfo.displayName,
-                bucket: tableInfo.bucket,
-                created: tableInfo.created,
-                lastImportDate: tableInfo.lastImportDate,
-                rowsCount: tableInfo.rowsCount,
-                dataSizeBytes: tableInfo.dataSizeBytes
+                uri: rawTableData.uri,
+                id: rawTableData.id,
+                name: rawTableData.name,
+                displayName: rawTableData.displayName,
+                transactional: rawTableData.transactional,
+                primaryKey: rawTableData.primaryKey || [],
+                indexType: rawTableData.indexType,
+                indexKey: rawTableData.indexKey || [],
+                distributionType: rawTableData.distributionType,
+                distributionKey: rawTableData.distributionKey || [],
+                syntheticPrimaryKeyEnabled: rawTableData.syntheticPrimaryKeyEnabled,
+                isAlias: rawTableData.isAlias,
+                isAliasable: rawTableData.isAliasable,
+                isTyped: rawTableData.isTyped,
+                tableType: rawTableData.tableType,
+                path: rawTableData.path
             },
-            columns: tableInfo.columns || [],
-            metadata: tableInfo.metadata || {},
-            exportedAt: new Date().toISOString(),
-            exportedBy: 'Keboola Storage Explorer'
+            
+            // Data statistics
+            statistics: {
+                rowsCount: rawTableData.rowsCount,
+                dataSizeBytes: rawTableData.dataSizeBytes,
+                created: rawTableData.created,
+                lastImportDate: rawTableData.lastImportDate,
+                lastChangeDate: rawTableData.lastChangeDate
+            },
+            
+            // Column information - simple list and detailed metadata
+            columns: {
+                list: rawTableData.columns || [],
+                metadata: rawTableData.columnMetadata || {}
+            },
+            
+            // Table metadata and attributes
+            metadata: rawTableData.metadata || [],
+            attributes: rawTableData.attributes || [],
+            
+            // Complete bucket information
+            bucket: rawTableData.bucket || {},
+            
+            // Export metadata
+            export: {
+                exportedAt: new Date().toISOString(),
+                exportedBy: 'Keboola Storage Explorer',
+                exportMethod: 'Storage API v2',
+                apiEndpoint: `/v2/storage/tables/${tableId}`
+            }
         };
 
         // Write schema file
@@ -439,12 +476,14 @@ export async function exportTableSchema(
         
         fs.writeFileSync(schemaPath, JSON.stringify(schema, null, 2));
         
-        outputChannel.appendLine(`Schema exported: ${schemaPath}`);
+        outputChannel.appendLine(`✅ Schema exported: ${schemaPath}`);
+        outputChannel.appendLine(`📊 Columns: ${(rawTableData.columns || []).length}, Rows: ${rawTableData.rowsCount}, Size: ${rawTableData.dataSizeBytes} bytes`);
+        
         return schemaPath;
 
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        outputChannel.appendLine(`Failed to export schema: ${message}`);
+        outputChannel.appendLine(`❌ Failed to export schema: ${message}`);
         throw new KbcCliError(`Failed to export table schema: ${message}`);
     }
 }
