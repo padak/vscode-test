@@ -5,6 +5,167 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] - 2025-01-21
+
+### 🐛 Critical Fixes
+- **Enhanced Export Logging**: Output panel now automatically opens during exports for better visibility
+- **Honest Progress Feedback**: Removed fake progress percentages, now shows real CLI output
+- **Better User Guidance**: Progress messages direct users to output panel for detailed logs
+- **Export Transparency**: Shows exact `kbc` command being executed in logs
+- **Duration Tracking**: Displays actual export time completion
+- **Improved Success Actions**: Export completion offers "Open File" and "Show in Output" options
+
+### ✨ Logging Improvements
+- **Auto-Show Output Panel**: Automatically opens "Keboola Storage Explorer" output when export starts
+- **Rich Emoji Logging**: Enhanced log readability with icons (📁📊📋⏳🔧✅❌🎉)
+- **Command Visibility**: Logs show exact CLI command: `kbc remote table download ... --limit X --header`
+- **Real-time CLI Output**: Progress bar shows actual output from `kbc` command (truncated)
+- **Error Visibility**: Output panel auto-opens on export failures for debugging
+
+### 🎯 Progress Bar Fixes
+- **No More Fake Progress**: Removed misleading manual increments (10%, 60%, etc.)
+- **Indeterminate Progress**: Shows spinning indicator with meaningful messages
+- **CLI Output Integration**: Displays real `kbc` command output in progress (truncated to 40 chars)
+- **Clear Status Messages**: "Downloading unlimited rows with headers... (see Output panel for details)"
+- **Completion Feedback**: "Export completed successfully!" with duration
+
+### 📊 Enhanced Export Experience
+- **Automatic Logging**: Export operations immediately show output panel
+- **Command Transparency**: Users can see exactly what CLI command is running
+- **Duration Display**: "✅ Table exported successfully in 12.3s"
+- **Success Options**: Notification provides "Open File" (opens CSV) and "Show in Output" buttons
+- **Error Debugging**: Failed exports automatically show output panel with error details
+
+### 🔧 Technical Improvements
+- **Honest UX**: No more misleading progress bars that don't reflect actual CLI progress
+- **Real CLI Integration**: Progress updates come from actual `kbc` command stdout
+- **Output Channel Management**: Proper show/hide behavior for user guidance
+- **Time Tracking**: Actual start/end time measurement for export operations
+- **User Choice Actions**: Success notifications with actionable buttons
+
+### 📦 Package Details
+- **Extension Size**: 229.99KB (73 files)
+- **Output Panel**: "Keboola Storage Explorer" channel for all export logs
+- **CLI Reality**: Acknowledges that `kbc` doesn't provide real-time progress API
+- **User Experience**: Focuses on transparency and useful feedback over fake progress
+
+### 💡 User Impact
+- **No More Confusion**: Users understand export is happening via clear logging
+- **Better Debugging**: Export issues are immediately visible in output panel
+- **Command Learning**: Users can see exact CLI commands for learning/debugging
+- **Realistic Expectations**: Progress indicates activity without fake percentages
+- **Improved Workflow**: Quick access to exported files and detailed logs
+
+---
+
+## [2.4.0] - 2025-01-21
+
+### 🚀 Major Features
+- **Unlimited Export Support**: Set row limit to 0 for unlimited exports (no --limit flag)
+- **Header Control**: Configurable CSV header inclusion with per-export override
+- **Enhanced Export Prompts**: Smart prompts for both row limit and header settings
+- **Improved CLI Command Construction**: Proper flag handling based on user preferences
+
+### ✨ Added
+- **Unlimited Exports**: Row limit 0 = no --limit flag in CLI command (download full tables)
+- **Header Control Setting**: New checkbox "Include headers by default" in Settings panel
+- **Dual Export Prompts**: Per-export overrides for both row limit (0-10M) and headers (Yes/No)
+- **Smart CLI Commands**: Conditional --header and --limit flags based on settings
+- **Enhanced Settings Display**: Export settings shown in table and bucket detail panels
+- **Improved Validation**: Row limit accepts 0 (unlimited) plus positive integers
+
+### 🔧 Settings Panel Changes
+- **Export Settings Section**: Separated preview and export configurations
+- **Header Checkbox**: "Include headers by default" with clear labeling
+- **Row Limit Input**: Accepts 0 for unlimited exports (0-10,000,000 range)
+- **Grid Layout**: Responsive design with separate sections for preview/export
+- **Current Status Display**: Shows "unlimited" when row limit is 0
+
+### 📤 Export Workflow Enhancements
+#### **Per-Export Prompts:**
+1. **Row Limit Prompt**: "Enter row limit (0 = unlimited, blank = use default: X)"
+2. **Headers Prompt**: "Include headers? (Yes/No, blank = use default: Y/N)"
+3. **Smart Defaults**: Uses settings from configuration panel
+4. **Override Capability**: Per-export customization without changing defaults
+
+#### **CLI Command Construction:**
+```bash
+kbc remote table download <table> --output <path> -t <token> -H <host>
+[--limit <number>]  # Only if rowLimit > 0
+[--header]          # Only if headers enabled
+```
+
+### 🎨 UI/UX Improvements
+- **Table Detail Panels**: Display current export settings with unlimited support
+- **Bucket Detail Panels**: Show export defaults and header settings
+- **Settings Panel**: Clean grid layout with separate preview/export sections
+- **Export Feedback**: Progress messages include header status ("with headers"/"without headers")
+- **Dynamic Updates**: Settings refresh when panels reopen
+
+### 📊 Export Features
+- **Table Export**: Prompts for limit + headers, uses optimized CLI command
+- **Bucket Export**: Applies settings to all tables in bucket
+- **Stage Export**: Consistent settings across all buckets/tables in stage
+- **Schema Export**: Unchanged, still available as separate option
+- **Progress Tracking**: Enhanced messages showing export configuration
+
+### 🎯 Export Behavior Examples
+#### **Unlimited Export (rowLimit = 0):**
+```bash
+kbc remote table download in.c-main.customers --output ./customers.csv --header -t [token] -H [host]
+# No --limit flag = download all rows
+```
+
+#### **Limited Export with Headers (rowLimit = 5000, headers = true):**
+```bash
+kbc remote table download in.c-main.orders --output ./orders.csv --limit 5000 --header -t [token] -H [host]
+```
+
+#### **Limited Export without Headers (rowLimit = 1000, headers = false):**
+```bash
+kbc remote table download in.c-main.products --output ./products.csv --limit 1000 -t [token] -H [host]
+# No --header flag = no column names
+```
+
+### 🔧 Technical Improvements
+- **ExportSettings Interface**: Structured settings with rowLimit and includeHeaders
+- **Smart Command Builder**: buildDownloadCommand() with conditional flag logic
+- **Enhanced Prompts**: promptForExportOverrides() with validation and defaults
+- **Settings Integration**: Seamless connection between settings panel and export operations
+- **Type Safety**: Proper TypeScript interfaces for export configurations
+
+### 📦 Technical Details
+- **Extension Size**: 227.84KB (73 files)
+- **CLI Integration**: Optimized command construction for Keboola CLI
+- **Settings Storage**: Per-connection header preferences in globalState
+- **Validation**: Row limit 0-10,000,000 range with 0 = unlimited
+- **User Experience**: Smart defaults with override capability
+
+### 🔄 Migration & Compatibility
+- **Settings Migration**: Existing users get default includeHeaders: true
+- **Backward Compatible**: All existing export operations continue working
+- **Enhanced Prompts**: Users see new header options in export workflows
+- **CLI Commands**: Improved flag usage for better performance and accuracy
+
+---
+
+## [2.3.1] - 2025-01-21
+
+### 🐛 Critical Fix
+- **Fixed CLI Export Commands**: Corrected KBC CLI flags for table exports
+  - Changed `--rows` → `--limit` (correct flag for row limiting)
+  - Changed `--storage-api-token` → `-t` (correct short flag)
+  - Changed `--storage-api-host` → `-H` (correct short flag)
+- **Export Operations Now Work**: Table, bucket, and stage exports functional
+- **Command Structure**: `kbc remote table download <table> -o <output> --limit <rows> -t <token> -H <host>`
+
+### 📦 Technical
+- Updated CLI command generation to use proper KBC CLI syntax
+- Fixed authentication flag usage based on `kbc remote table download --help`
+- Extension size: 223.89KB (73 files)
+
+---
+
 ## [2.3.0] - 2025-01-21
 
 ### 🚀 Major Features

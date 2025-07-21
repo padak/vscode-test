@@ -43,7 +43,8 @@ function getSettingsFromContext(context: vscode.ExtensionContext) {
         apiUrl: context.globalState.get<string>('keboola.apiUrl') || '',
         token: context.globalState.get<string>('keboola.token') || '',
         previewRowLimit: context.globalState.get<number>('keboola.previewRowLimit') || 100,
-        exportRowLimit: context.globalState.get<number>('keboola.exportRowLimit') || 2000
+        exportRowLimit: context.globalState.get<number>('keboola.exportRowLimit') || 2000,
+        includeHeaders: context.globalState.get<boolean>('keboola.includeHeaders') ?? true
     };
 }
 

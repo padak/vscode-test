@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { KeboolaTableDetail, KeboolaApi, KeboolaApiError } from './keboolaApi';
-import { exportTable, exportTableSchema, KbcCliOptions } from './kbcCli';
+import { exportTable, exportTableSchema, KbcCliOptions, ExportSettings } from './kbcCli';
 
 export class TableDetailPanel {
     public static currentPanel: TableDetailPanel | undefined;
@@ -151,7 +151,12 @@ export class TableDetailPanel {
                 host: apiUrl
             };
 
-            await exportTable(this.tableDetail.id, cliOptions, this.exportRowLimit);
+            const defaultSettings: ExportSettings = {
+                rowLimit: this.exportRowLimit,
+                includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true
+            };
+
+            await exportTable(this.tableDetail.id, cliOptions, defaultSettings);
 
         } catch (error) {
             console.error('Failed to export table:', error);
@@ -504,8 +509,11 @@ export class TableDetailPanel {
                     <span class="stage-badge stage-${this.tableDetail.bucket.stage}">${this.tableDetail.bucket.stage}</span>
                     
                     <div class="row-limit-display">
-                        📏 Current Limits: Preview: <strong>${this.previewRowLimit.toLocaleString()}</strong> rows | Export: <strong>${this.exportRowLimit.toLocaleString()}</strong> rows
-                        <br>Use "Keboola: Settings" to change these values
+                        📏 <strong>Current Settings:</strong><br>
+                        Preview: <strong>${this.previewRowLimit.toLocaleString()}</strong> rows | 
+                        Export: <strong>${this.exportRowLimit === 0 ? 'unlimited' : this.exportRowLimit.toLocaleString()}</strong> rows | 
+                        Headers: <strong>${this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</strong>
+                        <br><small>Use "Keboola: Settings" to change these defaults</small>
                     </div>
                 </div>
 

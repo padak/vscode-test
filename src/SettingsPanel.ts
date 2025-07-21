@@ -17,6 +17,7 @@ interface SettingsData {
     token: string;
     previewRowLimit: number;
     exportRowLimit: number;
+    includeHeaders: boolean;
     lastUsed?: string;
 }
 
@@ -132,8 +133,11 @@ export class SettingsPanel {
                     case 'saveToken':
                         await this.handleTokenSave(message.token);
                         break;
-                    case 'saveRowLimits':
-                        await this.handleRowLimitsSave(message.previewRowLimit, message.exportRowLimit);
+                    case 'saveExportSettings':
+                        await this.handleExportSettingsSave(message.exportRowLimit, message.includeHeaders);
+                        break;
+                    case 'savePreviewSettings':
+                        await this.handlePreviewSettingsSave(message.previewRowLimit);
                         break;
                     case 'testConnection':
                         await this.handleTestConnection();
@@ -204,7 +208,7 @@ export class SettingsPanel {
         }
     }
 
-    private async handleRowLimitsSave(previewRowLimit: number, exportRowLimit: number): Promise<void> {
+    private async handlePreviewSettingsSave(previewRowLimit: number): Promise<void> {
         try {
             // Validate preview row limit
             if (!previewRowLimit || previewRowLimit <= 0 || previewRowLimit > 10000) {
@@ -216,32 +220,56 @@ export class SettingsPanel {
                 return;
             }
 
-            // Validate export row limit
-            if (!exportRowLimit || exportRowLimit <= 0 || exportRowLimit > 1000000) {
-                this.panel.webview.postMessage({
-                    command: 'showMessage',
-                    type: 'error',
-                    text: 'Export row limit must be between 1 and 1,000,000'
-                });
-                return;
-            }
-
-            // Save both row limits
+            // Save preview row limit
             await this.context.globalState.update('keboola.previewRowLimit', previewRowLimit);
-            await this.context.globalState.update('keboola.exportRowLimit', exportRowLimit);
             
             // Show feedback
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'success',
-                text: `Row limits saved! Preview: ${previewRowLimit.toLocaleString()}, Export: ${exportRowLimit.toLocaleString()}`
+                text: `Preview row limit saved: ${previewRowLimit.toLocaleString()}`
             });
 
         } catch (error) {
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'error',
-                text: `Failed to save row limits: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `Failed to save preview settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    private async handleExportSettingsSave(exportRowLimit: number, includeHeaders: boolean): Promise<void> {
+        try {
+            // Validate export row limit (0 = unlimited is allowed)
+            if (exportRowLimit < 0 || exportRowLimit > 10000000) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Export row limit must be 0 (unlimited) or between 1 and 10,000,000'
+                });
+                return;
+            }
+
+            // Save export settings
+            await this.context.globalState.update('keboola.exportRowLimit', exportRowLimit);
+            await this.context.globalState.update('keboola.includeHeaders', includeHeaders);
+            
+            const limitText = exportRowLimit === 0 ? 'unlimited' : exportRowLimit.toLocaleString();
+            const headersText = includeHeaders ? 'included' : 'excluded';
+            
+            // Show feedback
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `Export settings saved! Limit: ${limitText}, Headers: ${headersText}`
+            });
+
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to save export settings: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
     }
@@ -298,6 +326,7 @@ export class SettingsPanel {
             token: this.context.globalState.get<string>('keboola.token') || '',
             previewRowLimit: this.context.globalState.get<number>('keboola.previewRowLimit') || 100,
             exportRowLimit: this.context.globalState.get<number>('keboola.exportRowLimit') || 2000,
+            includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true,
             lastUsed: this.context.globalState.get<string>('keboola.lastUsedUrl')
         };
     }
@@ -345,6 +374,9 @@ export class SettingsPanel {
                 </div>
             `;
         }).join('');
+
+        const exportLimitText = settings.exportRowLimit === 0 ? 'unlimited' : settings.exportRowLimit.toLocaleString();
+        const headersText = settings.includeHeaders ? 'included' : 'excluded';
 
         return `
         <!DOCTYPE html>
@@ -515,6 +547,25 @@ export class SettingsPanel {
                     font-style: italic;
                 }
                 
+                .checkbox-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-bottom: 16px;
+                }
+                
+                .checkbox-input {
+                    width: 16px;
+                    height: 16px;
+                    accent-color: var(--vscode-checkbox-background);
+                }
+                
+                .checkbox-label {
+                    font-weight: 500;
+                    color: var(--vscode-editor-foreground);
+                    cursor: pointer;
+                }
+                
                 .button {
                     background-color: var(--vscode-button-background);
                     color: var(--vscode-button-foreground);
@@ -566,17 +617,6 @@ export class SettingsPanel {
                     color: var(--vscode-editor-foreground);
                 }
                 
-                .form-row {
-                    display: flex;
-                    gap: 16px;
-                    align-items: end;
-                }
-                
-                .form-row .form-group {
-                    flex: 1;
-                    margin-bottom: 0;
-                }
-                
                 .current-settings {
                     background-color: var(--vscode-inputOption-activeBorder);
                     border-left: 3px solid var(--vscode-charts-blue);
@@ -587,15 +627,28 @@ export class SettingsPanel {
                     color: var(--vscode-descriptionForeground);
                 }
                 
-                .row-limits-grid {
+                .settings-grid {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 20px;
                     margin-bottom: 20px;
                 }
                 
+                .settings-section {
+                    border: 1px solid var(--vscode-input-border);
+                    border-radius: 6px;
+                    padding: 16px;
+                }
+                
+                .settings-section-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    margin: 0 0 12px 0;
+                    color: var(--vscode-editor-foreground);
+                }
+                
                 @media (max-width: 600px) {
-                    .row-limits-grid {
+                    .settings-grid {
                         grid-template-columns: 1fr;
                     }
                 }
@@ -611,8 +664,8 @@ export class SettingsPanel {
                     <div class="current-settings" id="currentSettings">
                         <strong>Current:</strong> ${settings.apiUrl || 'No provider selected'} | 
                         Token: ${settings.token ? '****** (saved)' : 'Not set'} | 
-                        Preview Limit: ${settings.previewRowLimit.toLocaleString()} | 
-                        Export Limit: ${settings.exportRowLimit.toLocaleString()}
+                        Preview: ${settings.previewRowLimit.toLocaleString()} rows | 
+                        Export: ${exportLimitText} | Headers: ${headersText}
                     </div>
                     
                     <h3 style="margin-bottom: 16px; color: var(--vscode-editor-foreground);">Select Cloud Provider & Region:</h3>
@@ -635,39 +688,55 @@ export class SettingsPanel {
                 </div>
                 
                 <div class="section">
-                    <h2 class="section-title">⚙️ Row Limits Configuration</h2>
+                    <h2 class="section-title">⚙️ Row Limits & Export Settings</h2>
                     
-                    <div class="row-limits-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="previewRowLimitInput">👁️ Preview Row Limit:</label>
-                            <input type="number" 
-                                   id="previewRowLimitInput" 
-                                   class="form-input" 
-                                   placeholder="100"
-                                   min="1"
-                                   max="10000"
-                                   value="${settings.previewRowLimit}">
-                            <div class="form-help">Smaller limit for faster loading of samples</div>
+                    <div class="settings-grid">
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">👁️ Preview Settings</h3>
+                            <div class="form-group">
+                                <label class="form-label" for="previewRowLimitInput">Row Limit:</label>
+                                <input type="number" 
+                                       id="previewRowLimitInput" 
+                                       class="form-input" 
+                                       placeholder="100"
+                                       min="1"
+                                       max="10000"
+                                       value="${settings.previewRowLimit}">
+                                <div class="form-help">Smaller limit for faster loading of samples (1-10,000)</div>
+                            </div>
+                            <button class="button" onclick="savePreviewSettings()">💾 Save Preview Settings</button>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="form-label" for="exportRowLimitInput">📤 Export Row Limit:</label>
-                            <input type="number" 
-                                   id="exportRowLimitInput" 
-                                   class="form-input" 
-                                   placeholder="2000"
-                                   min="1"
-                                   max="1000000"
-                                   value="${settings.exportRowLimit}">
-                            <div class="form-help">Higher limit allowed, but large tables may take longer to download</div>
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">📤 Export Settings</h3>
+                            <div class="form-group">
+                                <label class="form-label" for="exportRowLimitInput">Row Limit:</label>
+                                <input type="number" 
+                                       id="exportRowLimitInput" 
+                                       class="form-input" 
+                                       placeholder="2000"
+                                       min="0"
+                                       max="10000000"
+                                       value="${settings.exportRowLimit}">
+                                <div class="form-help">0 = unlimited, or 1-10,000,000 rows</div>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <input type="checkbox" 
+                                       id="includeHeadersInput" 
+                                       class="checkbox-input"
+                                       ${settings.includeHeaders ? 'checked' : ''}>
+                                <label class="checkbox-label" for="includeHeadersInput">Include headers by default</label>
+                            </div>
+                            
+                            <button class="button" onclick="saveExportSettings()">💾 Save Export Settings</button>
                         </div>
                     </div>
                     
-                    <button class="button" onclick="saveRowLimits()">💾 Save Row Limits</button>
-                    
                     <div style="margin-top: 16px; font-size: 12px; color: var(--vscode-descriptionForeground);">
-                        💡 <strong>Preview Limit:</strong> Used for "Preview Sample" actions (API calls)<br>
-                        💡 <strong>Export Limit:</strong> Default for CSV exports (can be overridden per export)
+                        💡 <strong>Preview:</strong> Used for "Preview Sample" actions (API calls)<br>
+                        💡 <strong>Export:</strong> Default for CSV exports (can be overridden per export)<br>
+                        💡 <strong>Headers:</strong> Include column names as first row in exports
                     </div>
                 </div>
             </div>
@@ -695,24 +764,33 @@ export class SettingsPanel {
                     });
                 }
                 
-                function saveRowLimits() {
+                function savePreviewSettings() {
                     const previewRowLimit = parseInt(document.getElementById('previewRowLimitInput').value);
-                    const exportRowLimit = parseInt(document.getElementById('exportRowLimitInput').value);
                     
                     if (isNaN(previewRowLimit) || previewRowLimit <= 0) {
-                        showMessage('error', 'Please enter a valid preview row limit');
-                        return;
-                    }
-                    
-                    if (isNaN(exportRowLimit) || exportRowLimit <= 0) {
-                        showMessage('error', 'Please enter a valid export row limit');
+                        showMessage('error', 'Please enter a valid preview row limit (1-10,000)');
                         return;
                     }
                     
                     vscode.postMessage({
-                        command: 'saveRowLimits',
-                        previewRowLimit: previewRowLimit,
-                        exportRowLimit: exportRowLimit
+                        command: 'savePreviewSettings',
+                        previewRowLimit: previewRowLimit
+                    });
+                }
+                
+                function saveExportSettings() {
+                    const exportRowLimit = parseInt(document.getElementById('exportRowLimitInput').value);
+                    const includeHeaders = document.getElementById('includeHeadersInput').checked;
+                    
+                    if (isNaN(exportRowLimit) || exportRowLimit < 0) {
+                        showMessage('error', 'Please enter a valid export row limit (0 = unlimited, or 1-10,000,000)');
+                        return;
+                    }
+                    
+                    vscode.postMessage({
+                        command: 'saveExportSettings',
+                        exportRowLimit: exportRowLimit,
+                        includeHeaders: includeHeaders
                     });
                 }
                 

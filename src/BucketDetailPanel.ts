@@ -39,14 +39,15 @@ export class BucketDetailPanel {
             }
         );
 
-        BucketDetailPanel.currentPanel = new BucketDetailPanel(panel, bucketDetail, previewRowLimit, exportRowLimit);
+        BucketDetailPanel.currentPanel = new BucketDetailPanel(panel, bucketDetail, previewRowLimit, exportRowLimit, context);
     }
 
     private constructor(
         panel: vscode.WebviewPanel, 
         bucketDetail: KeboolaBucketDetail,
         private readonly previewRowLimit: number = 100,
-        private readonly exportRowLimit: number = 2000
+        private readonly exportRowLimit: number = 2000,
+        private readonly context?: vscode.ExtensionContext
     ) {
         this.panel = panel;
         this.updateContent(bucketDetail);
@@ -293,6 +294,37 @@ export class BucketDetailPanel {
                     border-radius: 4px;
                     border-left: 4px solid var(--vscode-symbolIcon-namespaceForeground);
                 }
+
+                .export-settings {
+                    background-color: var(--vscode-textCodeBlock-background);
+                    border: 1px solid var(--vscode-input-border);
+                    border-radius: 6px;
+                    padding: 16px;
+                }
+
+                .settings-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 8px;
+                }
+
+                .setting-label {
+                    font-weight: 500;
+                    color: var(--vscode-editor-foreground);
+                }
+
+                .setting-value {
+                    font-weight: 600;
+                    color: var(--vscode-textLink-foreground);
+                }
+
+                .settings-note {
+                    margin-top: 12px;
+                    padding-top: 12px;
+                    border-top: 1px solid var(--vscode-widget-border);
+                    color: var(--vscode-descriptionForeground);
+                }
             </style>
         </head>
         <body>
@@ -341,6 +373,23 @@ export class BucketDetailPanel {
                             <td><strong>${bucketDetail.tables.length}</strong></td>
                         </tr>
                     </table>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">📤 Current Export Settings</h2>
+                    <div class="export-settings">
+                        <div class="settings-row">
+                            <span class="setting-label">Export limit:</span>
+                            <span class="setting-value">${this.exportRowLimit === 0 ? 'unlimited' : this.exportRowLimit.toLocaleString()} rows</span>
+                        </div>
+                        <div class="settings-row">
+                            <span class="setting-label">Headers:</span>
+                            <span class="setting-value">${this.context?.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</span>
+                        </div>
+                        <div class="settings-note">
+                            <small>💡 Use "Keboola: Settings" to change these defaults. Export operations will prompt to override these values.</small>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="section">

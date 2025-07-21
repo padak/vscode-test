@@ -50,8 +50,14 @@ export interface BucketInfo {
 
 export interface ExportOptions {
     rowLimit?: number;
+    includeHeaders?: boolean;
     includeSchema?: boolean;
     outputDirectory?: string;
+}
+
+export interface ExportSettings {
+    rowLimit: number;
+    includeHeaders: boolean;
 }
 
 /**
@@ -89,8 +95,8 @@ async function executeKbcCommand(
     return new Promise((resolve, reject) => {
         const fullArgs = [
             ...args,
-            '--storage-api-token', options.token,
-            '--storage-api-host', options.host
+            '-t', options.token,
+            '-H', options.host
         ];
 
         progressCallback?.(`Executing: kbc ${args.join(' ')}`);
@@ -150,18 +156,19 @@ async function executeKbcCommand(
 }
 
 /**
- * Prompt user for export row limit override
+ * Prompt user for export settings override
  */
-async function promptForRowLimitOverride(defaultLimit: number): Promise<number> {
-    const input = await vscode.window.showInputBox({
-        prompt: `Enter row limit for this export (leave blank to use default: ${defaultLimit.toLocaleString()})`,
-        placeHolder: defaultLimit.toString(),
+async function promptForExportOverrides(defaultSettings: ExportSettings): Promise<ExportSettings> {
+    // Prompt for row limit
+    const rowLimitInput = await vscode.window.showInputBox({
+        prompt: `Enter row limit for this export (0 = unlimited, leave blank to use default: ${defaultSettings.rowLimit === 0 ? 'unlimited' : defaultSettings.rowLimit.toLocaleString()})`,
+        placeHolder: defaultSettings.rowLimit === 0 ? '0 (unlimited)' : defaultSettings.rowLimit.toString(),
         validateInput: (value: string) => {
             if (!value) return null; // Allow empty for default
             
             const num = parseInt(value, 10);
-            if (isNaN(num) || num <= 0) {
-                return 'Please enter a positive number or leave blank for default';
+            if (isNaN(num) || num < 0) {
+                return 'Please enter 0 (unlimited) or a positive number, or leave blank for default';
             }
             if (num > 10000000) {
                 return 'Row limit cannot exceed 10,000,000';
@@ -170,11 +177,65 @@ async function promptForRowLimitOverride(defaultLimit: number): Promise<number> 
         }
     });
 
-    if (input === undefined) {
+    if (rowLimitInput === undefined) {
         throw new Error('Export cancelled by user');
     }
 
-    return input.trim() ? parseInt(input.trim(), 10) : defaultLimit;
+    const rowLimit = rowLimitInput.trim() ? parseInt(rowLimitInput.trim(), 10) : defaultSettings.rowLimit;
+
+    // Prompt for headers
+    const headersInput = await vscode.window.showInputBox({
+        prompt: `Include headers in this export? (Yes/No, leave blank to use default: ${defaultSettings.includeHeaders ? 'Yes' : 'No'})`,
+        placeHolder: defaultSettings.includeHeaders ? 'Yes (default)' : 'No (default)',
+        validateInput: (value: string) => {
+            if (!value) return null; // Allow empty for default
+            
+            const normalizedValue = value.toLowerCase().trim();
+            if (!['yes', 'y', 'no', 'n'].includes(normalizedValue)) {
+                return 'Please enter Yes, No, or leave blank for default';
+            }
+            return null;
+        }
+    });
+
+    if (headersInput === undefined) {
+        throw new Error('Export cancelled by user');
+    }
+
+    let includeHeaders = defaultSettings.includeHeaders;
+    if (headersInput.trim()) {
+        const normalizedValue = headersInput.toLowerCase().trim();
+        includeHeaders = ['yes', 'y'].includes(normalizedValue);
+    }
+
+    return { rowLimit, includeHeaders };
+}
+
+/**
+ * Build kbc download command with proper flags
+ */
+function buildDownloadCommand(
+    tableId: string,
+    outputPath: string,
+    exportSettings: ExportSettings
+): string[] {
+    const command = [
+        'remote', 'table', 'download',
+        tableId,
+        '--output', outputPath
+    ];
+
+    // Add --limit only if rowLimit > 0 (0 = unlimited)
+    if (exportSettings.rowLimit > 0) {
+        command.push('--limit', exportSettings.rowLimit.toString());
+    }
+
+    // Add --header if headers are enabled
+    if (exportSettings.includeHeaders) {
+        command.push('--header');
+    }
+
+    return command;
 }
 
 /**
@@ -183,14 +244,23 @@ async function promptForRowLimitOverride(defaultLimit: number): Promise<number> 
 export async function exportTable(
     tableId: string, 
     options: KbcCliOptions,
-    defaultRowLimit: number,
+    defaultSettings: ExportSettings,
     exportOptions: ExportOptions = {}
 ): Promise<string> {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine(`\n=== Starting table export: ${tableId} ===`);
+    outputChannel.show(true); // Show output channel to user
     
-    // Prompt for row limit override
-    const rowLimit = exportOptions.rowLimit || await promptForRowLimitOverride(defaultRowLimit);
+    // Get export settings (either from options or prompt user)
+    let exportSettings: ExportSettings;
+    if (exportOptions.rowLimit !== undefined && exportOptions.includeHeaders !== undefined) {
+        exportSettings = {
+            rowLimit: exportOptions.rowLimit,
+            includeHeaders: exportOptions.includeHeaders
+        };
+    } else {
+        exportSettings = await promptForExportOverrides(defaultSettings);
+    }
     
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -198,7 +268,8 @@ export async function exportTable(
         cancellable: false
     }, async (progress) => {
         try {
-            progress.report({ increment: 10, message: "Preparing export..." });
+            progress.report({ message: "Preparing export..." });
+            outputChannel.appendLine(`📋 Export settings: Row limit: ${exportSettings.rowLimit === 0 ? 'unlimited' : exportSettings.rowLimit.toLocaleString()}, Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
             
             // Choose output directory
             const outputDir = exportOptions.outputDirectory || await vscode.window.showOpenDialog({
@@ -212,48 +283,64 @@ export async function exportTable(
                 throw new Error('No output directory selected');
             }
 
-            progress.report({ increment: 10, message: `Downloading ${rowLimit.toLocaleString()} rows...` });
+            const limitText = exportSettings.rowLimit === 0 ? 'unlimited' : exportSettings.rowLimit.toLocaleString();
+            const headersText = exportSettings.includeHeaders ? 'with headers' : 'without headers';
+            
+            progress.report({ message: `Downloading ${limitText} rows ${headersText}... (see Output panel for details)` });
 
             // Execute export command
             const fileName = `${tableId.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
             const outputPath = path.join(outputDir, fileName);
             
-            outputChannel.appendLine(`Exporting to: ${outputPath}`);
-            outputChannel.appendLine(`Row limit: ${rowLimit.toLocaleString()}`);
+            outputChannel.appendLine(`📁 Exporting to: ${outputPath}`);
+            outputChannel.appendLine(`📊 Row limit: ${limitText}`);
+            outputChannel.appendLine(`📋 Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
+            outputChannel.appendLine(`⏳ Starting download... (this may take a while for large tables)`);
 
-            await executeKbcCommand([
-                'remote', 'table', 'download',
-                tableId,
-                '--output', outputPath,
-                '--rows', rowLimit.toString()
-            ], options, (message) => {
-                progress.report({ message: message.substring(0, 50) + '...' });
+            const downloadCommand = buildDownloadCommand(tableId, outputPath, exportSettings);
+            outputChannel.appendLine(`🔧 Command: kbc ${downloadCommand.join(' ')}`);
+            
+            const startTime = Date.now();
+            await executeKbcCommand(downloadCommand, options, (message) => {
+                // Show CLI output in progress (truncated)
+                const truncatedMessage = message.length > 40 ? message.substring(0, 40) + '...' : message;
+                progress.report({ message: truncatedMessage });
             });
+            
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            progress.report({ message: "Export completed successfully!" });
 
-            progress.report({ increment: 60, message: "Export completed" });
-
-            outputChannel.appendLine(`✅ Table ${tableId} exported successfully`);
+            outputChannel.appendLine(`✅ Table ${tableId} exported successfully in ${duration}s`);
             outputChannel.appendLine(`📁 Location: ${outputPath}`);
-            outputChannel.appendLine(`📊 Rows: ${rowLimit.toLocaleString()}`);
+            outputChannel.appendLine(`📊 Rows: ${limitText}`);
+            outputChannel.appendLine(`📋 Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
 
             // Export schema if requested
             if (exportOptions.includeSchema) {
-                progress.report({ increment: 10, message: "Exporting schema..." });
+                progress.report({ message: "Exporting schema..." });
                 await exportTableSchema(tableId, options, outputDir);
                 outputChannel.appendLine(`📋 Schema exported to ${tableId}.schema.json`);
             }
 
-            progress.report({ increment: 10, message: "Complete!" });
+            outputChannel.appendLine(`🎉 Export complete! Check ${outputPath}`);
 
             vscode.window.showInformationMessage(
-                `Table exported successfully to ${outputPath} (${rowLimit.toLocaleString()} rows)`
-            );
+                `Table exported successfully to ${outputPath} (${limitText} rows, ${headersText})`,
+                'Open File', 'Show in Output'
+            ).then(choice => {
+                if (choice === 'Open File') {
+                    vscode.commands.executeCommand('vscode.open', vscode.Uri.file(outputPath));
+                } else if (choice === 'Show in Output') {
+                    outputChannel.show(true);
+                }
+            });
 
             return outputPath;
 
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             outputChannel.appendLine(`❌ Export failed: ${message}`);
+            outputChannel.show(true); // Show output on error
             throw error;
         }
     });
@@ -319,14 +406,22 @@ export async function exportTableSchema(
 export async function exportBucket(
     bucketId: string, 
     options: KbcCliOptions,
-    defaultRowLimit: number,
+    defaultSettings: ExportSettings,
     exportOptions: ExportOptions = {}
 ): Promise<string> {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine(`\n=== Starting bucket export: ${bucketId} ===`);
     
-    // Prompt for row limit override
-    const rowLimit = exportOptions.rowLimit || await promptForRowLimitOverride(defaultRowLimit);
+    // Get export settings (either from options or prompt user)
+    let exportSettings: ExportSettings;
+    if (exportOptions.rowLimit !== undefined && exportOptions.includeHeaders !== undefined) {
+        exportSettings = {
+            rowLimit: exportOptions.rowLimit,
+            includeHeaders: exportOptions.includeHeaders
+        };
+    } else {
+        exportSettings = await promptForExportOverrides(defaultSettings);
+    }
     
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -369,14 +464,17 @@ export async function exportBucket(
                 return bucketDir;
             }
 
+            const limitText = exportSettings.rowLimit === 0 ? 'unlimited' : exportSettings.rowLimit.toLocaleString();
+            const headersText = exportSettings.includeHeaders ? 'with headers' : 'without headers';
+
             outputChannel.appendLine(`Found ${tables.length} tables in bucket`);
+            outputChannel.appendLine(`Export settings: ${limitText} rows per table, ${headersText}`);
 
             // Export each table
             const progressIncrement = Math.floor(70 / tables.length);
             
             for (let i = 0; i < tables.length; i++) {
                 const table = tables[i];
-                const tableProgress = Math.floor(((i + 1) / tables.length) * 100);
                 
                 progress.report({ 
                     increment: progressIncrement,
@@ -388,12 +486,8 @@ export async function exportBucket(
                 const fileName = `${table.id.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
                 const tablePath = path.join(bucketDir, fileName);
 
-                await executeKbcCommand([
-                    'remote', 'table', 'download',
-                    table.id,
-                    '--output', tablePath,
-                    '--rows', rowLimit.toString()
-                ], options);
+                const downloadCommand = buildDownloadCommand(table.id, tablePath, exportSettings);
+                await executeKbcCommand(downloadCommand, options);
 
                 outputChannel.appendLine(`✅ ${table.id} exported successfully`);
 
@@ -415,10 +509,11 @@ export async function exportBucket(
             outputChannel.appendLine(`✅ Bucket ${bucketId} exported successfully`);
             outputChannel.appendLine(`📁 Location: ${bucketDir}`);
             outputChannel.appendLine(`📊 Tables: ${tables.length}`);
-            outputChannel.appendLine(`📊 Row limit per table: ${rowLimit.toLocaleString()}`);
+            outputChannel.appendLine(`📊 Row limit per table: ${limitText}`);
+            outputChannel.appendLine(`📋 Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
 
             vscode.window.showInformationMessage(
-                `Bucket exported successfully to ${bucketDir} (${tables.length} tables, ${rowLimit.toLocaleString()} rows each)`
+                `Bucket exported successfully to ${bucketDir} (${tables.length} tables, ${limitText} rows each, ${headersText})`
             );
 
             return bucketDir;
@@ -505,14 +600,22 @@ export async function exportBucketSchema(
 export async function exportStage(
     stage: string, 
     options: KbcCliOptions,
-    defaultRowLimit: number,
+    defaultSettings: ExportSettings,
     exportOptions: ExportOptions = {}
 ): Promise<string> {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine(`\n=== Starting stage export: ${stage} ===`);
     
-    // Prompt for row limit override
-    const rowLimit = exportOptions.rowLimit || await promptForRowLimitOverride(defaultRowLimit);
+    // Get export settings (either from options or prompt user)
+    let exportSettings: ExportSettings;
+    if (exportOptions.rowLimit !== undefined && exportOptions.includeHeaders !== undefined) {
+        exportSettings = {
+            rowLimit: exportOptions.rowLimit,
+            includeHeaders: exportOptions.includeHeaders
+        };
+    } else {
+        exportSettings = await promptForExportOverrides(defaultSettings);
+    }
     
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -555,7 +658,11 @@ export async function exportStage(
                 return stageDir;
             }
 
+            const limitText = exportSettings.rowLimit === 0 ? 'unlimited' : exportSettings.rowLimit.toLocaleString();
+            const headersText = exportSettings.includeHeaders ? 'with headers' : 'without headers';
+
             outputChannel.appendLine(`Found ${stageBuckets.length} buckets in stage ${stage}`);
+            outputChannel.appendLine(`Export settings: ${limitText} rows per table, ${headersText}`);
 
             // Export each bucket
             const progressIncrement = Math.floor(70 / stageBuckets.length);
@@ -571,9 +678,11 @@ export async function exportStage(
                 outputChannel.appendLine(`Exporting bucket ${i + 1}/${stageBuckets.length}: ${bucket.id}`);
 
                 // Export bucket to stage directory
-                await exportBucket(bucket.id, options, rowLimit, {
+                await exportBucket(bucket.id, options, exportSettings, {
                     ...exportOptions,
-                    outputDirectory: stageDir
+                    outputDirectory: stageDir,
+                    rowLimit: exportSettings.rowLimit,
+                    includeHeaders: exportSettings.includeHeaders
                 });
 
                 outputChannel.appendLine(`✅ Bucket ${bucket.id} exported successfully`);
@@ -591,10 +700,11 @@ export async function exportStage(
             outputChannel.appendLine(`✅ Stage ${stage} exported successfully`);
             outputChannel.appendLine(`📁 Location: ${stageDir}`);
             outputChannel.appendLine(`📊 Buckets: ${stageBuckets.length}`);
-            outputChannel.appendLine(`📊 Row limit per table: ${rowLimit.toLocaleString()}`);
+            outputChannel.appendLine(`📊 Row limit per table: ${limitText}`);
+            outputChannel.appendLine(`📋 Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
 
             vscode.window.showInformationMessage(
-                `Stage exported successfully to ${stageDir} (${stageBuckets.length} buckets, ${rowLimit.toLocaleString()} rows per table)`
+                `Stage exported successfully to ${stageDir} (${stageBuckets.length} buckets, ${limitText} rows per table, ${headersText})`
             );
 
             return stageDir;
@@ -657,4 +767,4 @@ export async function exportStageSchema(
         outputChannel.appendLine(`Failed to export stage schema: ${message}`);
         throw new KbcCliError(`Failed to export stage schema: ${message}`);
     }
-} 
+}
