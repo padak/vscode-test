@@ -10,7 +10,8 @@ export class BucketDetailPanel {
         bucketDetail: KeboolaBucketDetail, 
         extensionUri: vscode.Uri, 
         keboolaApi?: any, 
-        rowLimit: number = 1000,
+        previewRowLimit: number = 100,
+        exportRowLimit: number = 2000,
         context?: any
     ): void {
         const column = vscode.window.activeTextEditor
@@ -38,10 +39,15 @@ export class BucketDetailPanel {
             }
         );
 
-        BucketDetailPanel.currentPanel = new BucketDetailPanel(panel, bucketDetail);
+        BucketDetailPanel.currentPanel = new BucketDetailPanel(panel, bucketDetail, previewRowLimit, exportRowLimit);
     }
 
-    private constructor(panel: vscode.WebviewPanel, bucketDetail: KeboolaBucketDetail) {
+    private constructor(
+        panel: vscode.WebviewPanel, 
+        bucketDetail: KeboolaBucketDetail,
+        private readonly previewRowLimit: number = 100,
+        private readonly exportRowLimit: number = 2000
+    ) {
         this.panel = panel;
         this.updateContent(bucketDetail);
 

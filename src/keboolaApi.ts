@@ -90,8 +90,8 @@ export class KeboolaApiError extends Error {
 }
 
 export class KeboolaApi {
-    private apiUrl: string;
-    private token: string;
+    public readonly apiUrl: string;
+    public readonly token: string;
 
     constructor(config: KeboolaConfig) {
         this.apiUrl = config.apiUrl.replace(/\/$/, ''); // Remove trailing slash
@@ -106,7 +106,7 @@ export class KeboolaApi {
                 method: 'GET',
                 headers: {
                     'X-StorageApi-Token': this.token,
-                    'User-Agent': 'Keboola-VSCode-Extension/2.1.4'
+                    'User-Agent': 'Keboola-VSCode-Extension/2.3.0'
                 }
             });
 
@@ -275,7 +275,7 @@ export class KeboolaApi {
         try {
             const headers: Record<string, string> = {
                 'X-StorageApi-Token': this.token,
-                'User-Agent': 'Keboola-VSCode-Extension/2.1.4'
+                'User-Agent': 'Keboola-VSCode-Extension/2.3.0'
             };
 
             let body: string | URLSearchParams | undefined;

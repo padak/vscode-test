@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { KeboolaTableDetail, KeboolaApi, KeboolaApiError } from './keboolaApi';
-import { getCurrentRowLimit } from './settings';
+import { exportTable, exportTableSchema, KbcCliOptions } from './kbcCli';
 
 export class TableDetailPanel {
     public static currentPanel: TableDetailPanel | undefined;
@@ -8,14 +8,16 @@ export class TableDetailPanel {
     private disposables: vscode.Disposable[] = [];
     private readonly tableDetail: KeboolaTableDetail;
     private readonly keboolaApi?: KeboolaApi;
-    private readonly rowLimit: number;
+    private readonly previewRowLimit: number;
+    private readonly exportRowLimit: number;
     private readonly context: vscode.ExtensionContext;
 
     public static createOrShow(
         tableDetail: KeboolaTableDetail, 
         extensionUri: vscode.Uri, 
         keboolaApi?: KeboolaApi, 
-        rowLimit: number = 1000,
+        previewRowLimit: number = 100,
+        exportRowLimit: number = 2000,
         context?: vscode.ExtensionContext
     ): void {
         const column = vscode.window.activeTextEditor
@@ -42,7 +44,8 @@ export class TableDetailPanel {
             panel, 
             tableDetail, 
             keboolaApi, 
-            rowLimit,
+            previewRowLimit,
+            exportRowLimit,
             context || {} as vscode.ExtensionContext
         );
     }
@@ -51,13 +54,15 @@ export class TableDetailPanel {
         panel: vscode.WebviewPanel, 
         tableDetail: KeboolaTableDetail, 
         keboolaApi?: KeboolaApi, 
-        rowLimit: number = 1000,
+        previewRowLimit: number = 100,
+        exportRowLimit: number = 2000,
         context: vscode.ExtensionContext = {} as vscode.ExtensionContext
     ) {
         this.panel = panel;
         this.tableDetail = tableDetail;
         this.keboolaApi = keboolaApi;
-        this.rowLimit = rowLimit;
+        this.previewRowLimit = previewRowLimit;
+        this.exportRowLimit = exportRowLimit;
         this.context = context;
 
         this.updateContent();
@@ -71,6 +76,9 @@ export class TableDetailPanel {
                         break;
                     case 'exportTable':
                         await this.handleExportTable();
+                        break;
+                    case 'exportSchema':
+                        await this.handleExportSchema();
                         break;
                     case 'refreshData':
                         await this.handleRefreshData();
@@ -96,9 +104,9 @@ export class TableDetailPanel {
                 title: "Loading table preview...",
                 cancellable: false
             }, async (progress) => {
-                progress.report({ increment: 50, message: `Fetching ${this.rowLimit} rows...` });
-                
-                const csvData = await this.keboolaApi!.getTablePreview(this.tableDetail.id, this.rowLimit);
+                            progress.report({ increment: 50, message: `Fetching ${this.previewRowLimit} rows...` });
+
+            const csvData = await this.keboolaApi!.getTablePreview(this.tableDetail.id, this.previewRowLimit);
 
                 progress.report({ increment: 25, message: "Opening in editor..." });
                 
@@ -113,9 +121,9 @@ export class TableDetailPanel {
                 progress.report({ increment: 25, message: "Preview complete!" });
                 
                 // Show success message
-                vscode.window.showInformationMessage(
-                    `Table preview opened in new tab (limited to ${this.rowLimit.toLocaleString()} rows)`
-                );
+                            vscode.window.showInformationMessage(
+                `Table preview opened in new tab (limited to ${this.previewRowLimit.toLocaleString()} rows)`
+            );
             });
         } catch (error) {
             console.error('Preview failed:', error);
@@ -128,50 +136,83 @@ export class TableDetailPanel {
     }
 
     private async handleExportTable(): Promise<void> {
-        if (!this.keboolaApi) {
-            vscode.window.showErrorMessage('No API connection available. Please configure your Keboola connection.');
-            return;
-        }
-
         try {
-            const saveUri = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file(`${this.tableDetail.name}.csv`),
-                filters: {
-                    'CSV Files': ['csv'],
-                    'All Files': ['*']
-                }
-            });
+            // Get current settings for CLI options
+            const apiUrl = this.context.globalState.get<string>('keboola.apiUrl');
+            const token = this.context.globalState.get<string>('keboola.token');
 
-            if (!saveUri) {
+            if (!apiUrl || !token) {
+                vscode.window.showErrorMessage('Please configure your Keboola connection in Settings first.');
+                return;
+            }
+
+            const cliOptions: KbcCliOptions = {
+                token,
+                host: apiUrl
+            };
+
+            await exportTable(this.tableDetail.id, cliOptions, this.exportRowLimit);
+
+        } catch (error) {
+            console.error('Failed to export table:', error);
+            if (error instanceof Error) {
+                vscode.window.showErrorMessage(`Export failed: ${error.message}`);
+            } else {
+                vscode.window.showErrorMessage(`Export failed: Unknown error`);
+            }
+        }
+    }
+
+    private async handleExportSchema(): Promise<void> {
+        try {
+            // Get current settings for CLI options
+            const apiUrl = this.context.globalState.get<string>('keboola.apiUrl');
+            const token = this.context.globalState.get<string>('keboola.token');
+
+            if (!apiUrl || !token) {
+                vscode.window.showErrorMessage('Please configure your Keboola connection in Settings first.');
+                return;
+            }
+
+            const cliOptions: KbcCliOptions = {
+                token,
+                host: apiUrl
+            };
+
+            // Choose output directory
+            const outputDir = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: 'Select Schema Export Directory'
+            }).then(result => result?.[0]?.fsPath);
+
+            if (!outputDir) {
                 return;
             }
 
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Exporting table...",
+                title: "Exporting table schema...",
                 cancellable: false
             }, async (progress) => {
-                progress.report({ increment: 25, message: `Downloading ${this.rowLimit} rows...` });
-                
-                const csvData = await this.keboolaApi!.getTablePreview(this.tableDetail.id, this.rowLimit);
+                progress.report({ increment: 50, message: "Fetching table metadata..." });
 
-                progress.report({ increment: 50, message: "Saving file..." });
-                
-                // Write to file
-                await vscode.workspace.fs.writeFile(saveUri, Buffer.from(csvData, 'utf8'));
-                
-                progress.report({ increment: 25, message: "Export complete!" });
-                
+                const schemaPath = await exportTableSchema(this.tableDetail.id, cliOptions, outputDir);
+
+                progress.report({ increment: 50, message: "Complete!" });
+
                 vscode.window.showInformationMessage(
-                    `Table exported successfully to ${saveUri.fsPath} (${this.rowLimit.toLocaleString()} rows max)`
+                    `Table schema exported successfully to ${schemaPath}`
                 );
             });
+
         } catch (error) {
-            console.error('Export failed:', error);
-            if (error instanceof KeboolaApiError) {
-                vscode.window.showErrorMessage(`Export failed: ${error.message}`);
+            console.error('Failed to export table schema:', error);
+            if (error instanceof Error) {
+                vscode.window.showErrorMessage(`Schema export failed: ${error.message}`);
             } else {
-                vscode.window.showErrorMessage(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                vscode.window.showErrorMessage(`Schema export failed: Unknown error`);
             }
         }
     }
@@ -463,8 +504,8 @@ export class TableDetailPanel {
                     <span class="stage-badge stage-${this.tableDetail.bucket.stage}">${this.tableDetail.bucket.stage}</span>
                     
                     <div class="row-limit-display">
-                        📏 Current row limit for previews/exports: <strong>${this.rowLimit.toLocaleString()}</strong> rows
-                        <br>Use "Keboola: Set Row Limit" command to change this value
+                        📏 Current Limits: Preview: <strong>${this.previewRowLimit.toLocaleString()}</strong> rows | Export: <strong>${this.exportRowLimit.toLocaleString()}</strong> rows
+                        <br>Use "Keboola: Settings" to change these values
                     </div>
                 </div>
 
@@ -476,6 +517,9 @@ export class TableDetailPanel {
                         </button>
                         <button class="action-button" onclick="exportTable()">
                             📤 Export Table
+                        </button>
+                        <button class="action-button secondary" onclick="exportSchema()">
+                            📋 Export Schema Only
                         </button>
                         <button class="action-button secondary" onclick="refreshData()">
                             🔄 Refresh Data
@@ -560,6 +604,10 @@ export class TableDetailPanel {
 
                 function exportTable() {
                     vscode.postMessage({ command: 'exportTable' });
+                }
+
+                function exportSchema() {
+                    vscode.postMessage({ command: 'exportSchema' });
                 }
 
                 function refreshData() {

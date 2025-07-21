@@ -2,7 +2,7 @@
 	"name": "keboola-storage-api-explorer",
 	"displayName": "Keboola Storage API Explorer",
 	"description": "Browse and explore Keboola Storage tables via direct API calls",
-	"version": "2.1.4",
+	"version": "2.3.0",
 	"publisher": "keboola",
 	"engines": {
 		"vscode": "^1.74.0"
@@ -35,6 +35,11 @@
 		},
 		"commands": [
 			{
+				"command": "keboola.settings",
+				"title": "Settings",
+				"icon": "$(settings-gear)"
+			},
+			{
 				"command": "keboola.configure",
 				"title": "Configure Connection",
 				"icon": "$(gear)"
@@ -63,19 +68,14 @@
 		"menus": {
 			"view/title": [
 				{
-					"command": "keboola.configure",
+					"command": "keboola.settings",
 					"when": "view == keboolaExplorer",
 					"group": "navigation@1"
 				},
 				{
-					"command": "keboola.setRowLimit",
-					"when": "view == keboolaExplorer",
-					"group": "navigation@2"
-				},
-				{
 					"command": "keboola.refresh",
 					"when": "view == keboolaExplorer",
-					"group": "navigation@3"
+					"group": "navigation@2"
 				}
 			],
 			"view/item/context": [
@@ -91,6 +91,10 @@
 				}
 			],
 			"commandPalette": [
+				{
+					"command": "keboola.settings",
+					"title": "Keboola: Settings"
+				},
 				{
 					"command": "keboola.configure",
 					"title": "Keboola: Configure Connection"

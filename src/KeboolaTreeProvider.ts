@@ -39,16 +39,16 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 // Load real data from Keboola API
                 this.tables = await this.keboolaApi.listTables();
             } else {
-                vscode.window.showErrorMessage('Failed to connect to Keboola API. Please check your credentials.');
+                vscode.window.showErrorMessage('Failed to connect to Keboola API. Please check your credentials in Settings.');
             }
         } catch (error) {
             console.error('Failed to load Keboola data:', error);
             
             // Show error message to user
             if (error instanceof KeboolaApiError) {
-                vscode.window.showErrorMessage(`Keboola API Error: ${error.message}`);
+                vscode.window.showErrorMessage(`Keboola API Error: ${error.message}. Please check your settings.`);
             } else {
-                vscode.window.showErrorMessage(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                vscode.window.showErrorMessage(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your settings.`);
             }
         }
     }
@@ -68,7 +68,7 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 vscode.TreeItemCollapsibleState.None,
                 'status'
             );
-            statusItem.description = this.isApiConnected ? 'API connected' : 'Configure connection';
+            statusItem.description = this.isApiConnected ? 'API connected' : 'Configure in Settings';
             statusItem.iconPath = new vscode.ThemeIcon(this.isApiConnected ? 'check' : 'error');
             items.push(statusItem);
             

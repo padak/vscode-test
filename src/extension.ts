@@ -3,14 +3,19 @@ import { KeboolaApi, KeboolaApiError } from './keboolaApi';
 import { KeboolaTreeProvider, TreeItem } from './KeboolaTreeProvider';
 import { TableDetailPanel } from './TableDetailPanel';
 import { BucketDetailPanel } from './BucketDetailPanel';
-import { getStoredConfig, storeConfig, getCurrentRowLimit, setRowLimit } from './settings';
+import { SettingsPanel } from './SettingsPanel';
 
 let keboolaApi: KeboolaApi | undefined;
 let treeProvider: KeboolaTreeProvider;
 let treeView: vscode.TreeView<TreeItem>;
+let outputChannel: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Keboola Storage API Explorer is now active!');
+
+    // Create output channel for logging
+    outputChannel = vscode.window.createOutputChannel('Keboola Storage Explorer');
+    context.subscriptions.push(outputChannel);
 
     // Initialize tree provider
     treeProvider = new KeboolaTreeProvider();
@@ -24,12 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Add tree view to context subscriptions
     context.subscriptions.push(treeView);
 
-    // Load stored configuration
-    const storedConfig = getStoredConfig();
-    if (storedConfig.apiUrl && storedConfig.token) {
-        keboolaApi = new KeboolaApi(storedConfig);
-        treeProvider.setKeboolaApi(keboolaApi);
-    }
+    // Load stored configuration and initialize API
+    initializeFromSettings(context);
 
     // Register commands
     registerCommands(context);
@@ -37,20 +38,48 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('All commands registered successfully');
 }
 
+function getSettingsFromContext(context: vscode.ExtensionContext) {
+    return {
+        apiUrl: context.globalState.get<string>('keboola.apiUrl') || '',
+        token: context.globalState.get<string>('keboola.token') || '',
+        previewRowLimit: context.globalState.get<number>('keboola.previewRowLimit') || 100,
+        exportRowLimit: context.globalState.get<number>('keboola.exportRowLimit') || 2000
+    };
+}
+
+function initializeFromSettings(context: vscode.ExtensionContext) {
+    const settings = getSettingsFromContext(context);
+    
+    if (settings.apiUrl && settings.token) {
+        keboolaApi = new KeboolaApi({ 
+            apiUrl: settings.apiUrl, 
+            token: settings.token 
+        });
+        treeProvider.setKeboolaApi(keboolaApi);
+    }
+}
+
 function registerCommands(context: vscode.ExtensionContext) {
-    // Configure connection
-    const configureCmd = vscode.commands.registerCommand('keboola.configure', async () => {
-        await configureKeboolaConnection();
+    // Settings panel command
+    const settingsCmd = vscode.commands.registerCommand('keboola.settings', () => {
+        SettingsPanel.createOrShow(context, context.extensionUri);
+    });
+
+    // Configure connection (now opens settings panel)
+    const configureCmd = vscode.commands.registerCommand('keboola.configure', () => {
+        SettingsPanel.createOrShow(context, context.extensionUri);
     });
 
     // Refresh tree
     const refreshCmd = vscode.commands.registerCommand('keboola.refresh', () => {
+        // Reinitialize API from current settings
+        initializeFromSettings(context);
         treeProvider.refresh();
     });
 
-    // Set row limit
-    const setRowLimitCmd = vscode.commands.registerCommand('keboola.setRowLimit', async () => {
-        await setRowLimitCommand();
+    // Set row limit (now opens settings panel)
+    const setRowLimitCmd = vscode.commands.registerCommand('keboola.setRowLimit', () => {
+        SettingsPanel.createOrShow(context, context.extensionUri);
     });
 
     // Show table details
@@ -75,6 +104,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
     // Add all commands to subscriptions
     context.subscriptions.push(
+        settingsCmd,
         configureCmd,
         refreshCmd,
         setRowLimitCmd,
@@ -83,122 +113,28 @@ function registerCommands(context: vscode.ExtensionContext) {
     );
 }
 
-async function configureKeboolaConnection() {
-    try {
-        // Show quick pick for connection type
-        const connectionType = await vscode.window.showQuickPick([
-            'Configure API Connection'
-        ], {
-            placeHolder: 'Choose connection type'
-        });
-
-        if (!connectionType) {
-            return;
-        }
-
-        // Get API URL
-        const apiUrl = await vscode.window.showInputBox({
-            prompt: 'Enter your Keboola API URL',
-            placeHolder: 'https://connection.keboola.com',
-            value: getStoredConfig().apiUrl || '',
-            validateInput: (value: string) => {
-                if (!value) {
-                    return 'API URL is required';
-                }
-                if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                    return 'Please enter a valid URL starting with http:// or https://';
-                }
-                return null;
-            }
-        });
-
-        if (!apiUrl) {
-            return;
-        }
-
-        // Get API token
-        const token = await vscode.window.showInputBox({
-            prompt: 'Enter your Keboola Storage API token',
-            placeHolder: 'Your API token...',
-            password: true,
-            validateInput: (value: string) => {
-                if (!value) {
-                    return 'API token is required';
-                }
-                if (value.length < 10) {
-                    return 'Token seems too short. Please check your token.';
-                }
-                return null;
-            }
-        });
-
-        if (!token) {
-            return;
-        }
-
-        // Test the connection
-        const testApi = new KeboolaApi({ apiUrl, token });
-        
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: "Testing Keboola connection...",
-            cancellable: false
-        }, async () => {
-            const isConnected = await testApi.testConnection();
-            
-            if (!isConnected) {
-                throw new Error('Failed to connect to Keboola API. Please check your credentials.');
-            }
-        });
-
-        // Save configuration
-        storeConfig({ apiUrl, token });
-        keboolaApi = testApi;
-        treeProvider.setKeboolaApi(keboolaApi);
-
-        vscode.window.showInformationMessage('✅ Keboola connection configured successfully!');
-
-    } catch (error) {
-        console.error('Configuration failed:', error);
-        if (error instanceof KeboolaApiError) {
-            vscode.window.showErrorMessage(`Configuration failed: ${error.message}`);
-        } else {
-            vscode.window.showErrorMessage(`Configuration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
-}
-
-async function setRowLimitCommand() {
-    const currentLimit = getCurrentRowLimit();
-    
-    const input = await vscode.window.showInputBox({
-        prompt: 'Enter row limit for data preview and export',
-        placeHolder: 'e.g., 1000, 5000, 50000',
-        value: currentLimit.toString(),
-        validateInput: (value: string) => {
-            const num = parseInt(value, 10);
-            if (isNaN(num) || num <= 0) {
-                return 'Please enter a positive number';
-            }
-            if (num > 1000000) {
-                return 'Row limit cannot exceed 1,000,000';
-            }
-            return null;
-        }
-    });
-
-    if (input) {
-        const newLimit = parseInt(input, 10);
-        setRowLimit(newLimit);
-        vscode.window.showInformationMessage(`Row limit set to ${newLimit.toLocaleString()}`);
-    }
-}
-
 async function showTableDetails(tableId: string, context: vscode.ExtensionContext) {
     try {
-        if (!keboolaApi) {
-            vscode.window.showErrorMessage('No API connection available. Please configure your Keboola connection.');
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
             return;
+        }
+
+        // Ensure API is initialized with current settings
+        if (!keboolaApi || keboolaApi.apiUrl !== settings.apiUrl || keboolaApi.token !== settings.token) {
+            keboolaApi = new KeboolaApi({ 
+                apiUrl: settings.apiUrl, 
+                token: settings.token 
+            });
         }
 
         await vscode.window.withProgress({
@@ -207,13 +143,13 @@ async function showTableDetails(tableId: string, context: vscode.ExtensionContex
             cancellable: false
         }, async () => {
             const tableDetail = await keboolaApi!.getTableDetail(tableId);
-            const rowLimit = getCurrentRowLimit();
 
             TableDetailPanel.createOrShow(
                 tableDetail,
                 context.extensionUri,
                 keboolaApi,
-                rowLimit,
+                settings.previewRowLimit,
+                settings.exportRowLimit,
                 context
             );
         });
@@ -229,9 +165,26 @@ async function showTableDetails(tableId: string, context: vscode.ExtensionContex
 
 async function showBucketDetails(bucketId: string, context: vscode.ExtensionContext) {
     try {
-        if (!keboolaApi) {
-            vscode.window.showErrorMessage('No API connection available. Please configure your Keboola connection.');
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
             return;
+        }
+
+        // Ensure API is initialized with current settings
+        if (!keboolaApi || keboolaApi.apiUrl !== settings.apiUrl || keboolaApi.token !== settings.token) {
+            keboolaApi = new KeboolaApi({ 
+                apiUrl: settings.apiUrl, 
+                token: settings.token 
+            });
         }
 
         await vscode.window.withProgress({
@@ -240,13 +193,13 @@ async function showBucketDetails(bucketId: string, context: vscode.ExtensionCont
             cancellable: false
         }, async () => {
             const bucketDetail = await keboolaApi!.getBucketDetail(bucketId);
-            const rowLimit = getCurrentRowLimit();
 
             BucketDetailPanel.createOrShow(
                 bucketDetail,
                 context.extensionUri,
                 keboolaApi,
-                rowLimit,
+                settings.previewRowLimit,
+                settings.exportRowLimit,
                 context
             );
         });
@@ -262,4 +215,8 @@ async function showBucketDetails(bucketId: string, context: vscode.ExtensionCont
 
 export function deactivate() {
     console.log('Keboola Storage API Explorer is now deactivated');
+}
+
+export function getOutputChannel(): vscode.OutputChannel {
+    return outputChannel;
 } 

@@ -5,6 +5,135 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-01-21
+
+### 🚀 Major Features
+- **Dual Row Limits**: Separate preview (100) and export (2000) row limits for optimized performance
+- **Export Progress Tracking**: Real-time progress bars and logging for all export operations
+- **Schema-Only Exports**: Export table/bucket/stage metadata as JSON without data
+- **Row Limit Override**: Per-export prompts to override default limits
+- **Output Channel Logging**: Dedicated "Keboola Storage Explorer" output panel for operation logs
+
+### ✨ Added
+- Enhanced `SettingsPanel.ts` with dual row limit configuration (Preview: 100, Export: 2000)
+- New export functions: `exportTable()`, `exportBucket()`, `exportStage()` with CLI integration
+- Schema export functions: `exportTableSchema()`, `exportBucketSchema()`, `exportStageSchema()`
+- Progress bars with detailed status: "Exported 3/15 tables (currently: table_name)"
+- Row limit override prompts with validation (1-10,000,000 range)
+- "Export Schema Only" button in table detail panels
+- Output channel logging for all CLI operations and export tracking
+- Real-time export completion notifications with file paths
+
+### 🔧 Changed
+- **BREAKING**: Split single `rowLimit` into `previewRowLimit` and `exportRowLimit`
+- Settings panel now shows two separate row limit inputs with help text
+- Table/bucket detail panels display both current limits prominently
+- Preview Sample uses `previewRowLimit` (fast API calls)
+- All exports use `exportRowLimit` or user override (CLI with progress)
+- Export operations moved from API preview to proper CLI download
+- Enhanced error handling with specific CLI error types
+
+### 🗑️ Removed
+- Single `rowLimit` configuration (replaced with dual limits)
+- Simple file save dialog for exports (replaced with CLI-based exports)
+- API-based exports for large data (now uses CLI for proper export)
+
+### 🎯 Export Features
+- **Table Export**: Individual table download with row limit override
+- **Bucket Export**: All tables in bucket with subfolder organization
+- **Stage Export**: All buckets/tables in stage with nested folder structure
+- **Schema Export**: Metadata-only JSON files (.schema.json) with:
+  - Table: columns, types, metadata, created/modified timestamps
+  - Bucket: table list, descriptions, hierarchy
+  - Stage: bucket list, organization structure
+
+### 📊 Progress & Logging
+- Real-time progress bars for multi-table exports
+- Export completion logging to VS Code Output panel
+- Detailed CLI command output capture ([STDOUT], [STDERR], [EXIT])
+- Success notifications with exact file paths and row counts
+- Operation tracking: "Exported 5/12 buckets (currently: bucket_name)"
+
+### 🎨 UI/UX Improvements
+- Settings panel grid layout for row limits (responsive design)
+- Row limit help text: "Smaller limit for faster loading" / "Higher limit for downloads"
+- Current limits display in all detail panels
+- "Export Schema Only" secondary button styling
+- Enhanced validation messages and user feedback
+
+### 📦 Technical
+- Updated User-Agent to `Keboola-VSCode-Extension/2.3.0`
+- Extension size: 222.79KB (73 files)
+- Enhanced CLI integration with proper timeout and error handling
+- Improved TypeScript types for export options and CLI configurations
+- Added output channel management and disposal
+- Schema file format: `.schema.json` with ISO timestamps and export metadata
+
+### 🔧 Settings Migration
+- Automatic migration: old `rowLimit` → `previewRowLimit: 100, exportRowLimit: 2000`
+- Settings stored per connection in `context.globalState`
+- Preview: 1-10,000 rows (API optimization)
+- Export: 1-1,000,000 rows (CLI capability)
+
+---
+
+## [2.2.0] - 2025-01-21
+
+### 🚀 Major Features
+- **New Settings Panel**: Complete in-extension settings UI with cloud provider selection
+- **Cloud Provider Selection**: Visual cards for Azure, AWS, Google Cloud, and Canary (DEV)
+- **Regional Configuration**: Support for EU/US regions with flag indicators and "LAST USED" badges
+- **Unified Settings**: Combined connection setup and row limit configuration in one panel
+- **Real-time Testing**: Built-in connection test with visual feedback
+
+### ✨ Added
+- `SettingsPanel.ts` - Modern WebView-based settings interface
+- "Keboola: Settings" command accessible from activity bar and command palette
+- Cloud provider icons integration (Azure, AWS, Google Cloud SVGs)
+- Visual region selection with emoji flags (🇪🇺 🇺🇸 🧪)
+- Connection testing with success/error feedback
+- Real-time settings persistence to `context.globalState`
+- Row limit configuration with validation (1-1,000,000)
+- Current settings display at top of panel
+
+### 🔧 Changed
+- **BREAKING**: Removed old InputBox-based configuration flow
+- Settings now stored in `context.globalState` instead of VS Code workspace configuration
+- All components (API, CLI, panels) read settings from centralized location
+- "Configure Connection" and "Set Row Limit" commands now open Settings panel
+- Activity bar shows only Settings and Refresh buttons (simplified UI)
+- Tree view displays "Configure in Settings" instead of generic error messages
+- Table detail panels reference "Keboola: Settings" for row limit changes
+
+### 🗑️ Removed
+- Old `settings.ts` configuration system (InputBox prompts)
+- VS Code workspace configuration dependencies
+- Separate row limit command (now integrated in Settings)
+- Multiple navigation buttons from activity bar (streamlined)
+
+### 🎨 UI/UX Improvements
+- Modern card-based provider selection interface
+- Visual connection status with color-coded messages
+- Auto-hiding success/error notifications (5-second timeout)
+- Responsive form layouts with proper validation
+- Professional styling using VS Code theme variables
+- "LAST USED" badges for recently selected providers
+
+### 📦 Technical
+- Updated User-Agent to `Keboola-VSCode-Extension/2.2.0`
+- Extension size: 213.71KB (73 files)
+- Made `KeboolaApi.apiUrl` and `KeboolaApi.token` public readonly
+- Centralized settings management through extension context
+- Enhanced error handling with settings panel integration
+
+### 🌐 Supported Cloud Providers
+- **Azure**: Europe (North Europe)
+- **AWS**: Europe (eu-central-1), United States (primary)
+- **Google Cloud**: Europe (europe-west3), United States (us-east4)
+- **Canary (DEV)**: Development environment
+
+---
+
 ## [2.1.4] - 2025-01-21
 
 ### 🐛 Fixed
