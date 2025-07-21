@@ -2,7 +2,7 @@
 	"name": "keboola-storage-api-explorer",
 	"displayName": "Keboola Storage API Explorer",
 	"description": "Browse and explore Keboola Storage tables via direct API calls",
-	"version": "2.8.1",
+	"version": "3.0.0",
 	"publisher": "keboola",
 	"engines": {
 		"vscode": "^1.74.0"
@@ -50,6 +50,11 @@
 				"icon": "$(refresh)"
 			},
 			{
+				"command": "keboola.refreshConfigurations",
+				"title": "Refresh Configurations",
+				"icon": "$(refresh)"
+			},
+			{
 				"command": "keboola.setRowLimit",
 				"title": "Set Row Limit",
 				"icon": "$(settings-gear)"
@@ -68,6 +73,16 @@
 				"command": "keboola.showStage",
 				"title": "Show Stage Details",
 				"icon": "$(layers)"
+			},
+			{
+				"command": "keboola.showBranch",
+				"title": "Show Branch Details",
+				"icon": "$(git-branch)"
+			},
+			{
+				"command": "keboola.showConfiguration",
+				"title": "Show Configuration",
+				"icon": "$(file-code)"
 			}
 		],
 		"menus": {
@@ -98,6 +113,21 @@
 					"command": "keboola.showStage",
 					"when": "view == keboolaExplorer && viewItem == stage",
 					"group": "inline"
+				},
+				{
+					"command": "keboola.showBranch",
+					"when": "view == keboolaExplorer && viewItem == branch",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.showConfiguration",
+					"when": "view == keboolaExplorer && viewItem == configuration",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.refreshConfigurations",
+					"when": "view == keboolaExplorer && viewItem == configurations",
+					"group": "inline"
 				}
 			],
 			"commandPalette": [
@@ -118,8 +148,20 @@
 					"title": "Keboola: Refresh Storage"
 				},
 				{
+					"command": "keboola.refreshConfigurations",
+					"title": "Keboola: Refresh Configurations"
+				},
+				{
 					"command": "keboola.showStage",
 					"title": "Keboola: Show Stage Details"
+				},
+				{
+					"command": "keboola.showBranch",
+					"title": "Keboola: Show Branch Details"
+				},
+				{
+					"command": "keboola.showConfiguration",
+					"title": "Keboola: Show Configuration"
 				}
 			]
 		},

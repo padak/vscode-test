@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { KeboolaTable, KeboolaApi, KeboolaApiError } from './keboolaApi';
+import { KeboolaTable, KeboolaApi, KeboolaApiError, KeboolaBranch, KeboolaComponent, KeboolaConfiguration } from './keboolaApi';
+import { ConfigurationsTreeProvider, ConfigurationTreeItem } from './ConfigurationsTreeProvider';
 
 export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | null | void> = new vscode.EventEmitter<TreeItem | undefined | null | void>();
@@ -8,11 +9,15 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     private tables: KeboolaTable[] = [];
     private isApiConnected: boolean = false;
     private keboolaApi?: KeboolaApi;
+    private configurationsProvider: ConfigurationsTreeProvider;
 
-    constructor() {}
+    constructor() {
+        this.configurationsProvider = new ConfigurationsTreeProvider();
+    }
 
     setKeboolaApi(api: KeboolaApi | undefined): void {
         this.keboolaApi = api;
+        this.configurationsProvider.setKeboolaApi(api);
         this.refresh();
     }
 
@@ -20,6 +25,11 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         this.loadData().then(() => {
             this._onDidChangeTreeData.fire();
         });
+    }
+
+    refreshConfigurations(): void {
+        this.configurationsProvider.refresh();
+        this._onDidChangeTreeData.fire();
     }
 
     private async loadData(): Promise<void> {
@@ -58,7 +68,7 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         return element;
     }
 
-    getChildren(element?: TreeItem): Thenable<TreeItem[]> {
+    async getChildren(element?: TreeItem): Promise<TreeItem[]> {
         if (!element) {
             // Root level: show Storage node and connection status
             const items: TreeItem[] = [];
@@ -73,17 +83,30 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             statusItem.iconPath = new vscode.ThemeIcon(this.isApiConnected ? 'check' : 'error');
             items.push(statusItem);
             
-            if (this.isApiConnected && this.tables.length > 0) {
+            if (this.isApiConnected) {
                 // Add Storage root node
-                const storageItem = new TreeItem(
-                    'Storage',
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'storage'
+                if (this.tables.length > 0) {
+                    const storageItem = new TreeItem(
+                        'Storage',
+                        vscode.TreeItemCollapsibleState.Expanded,
+                        'storage'
+                    );
+                    storageItem.description = `${this.tables.length} tables`;
+                    storageItem.tooltip = 'Keboola Storage tables and buckets';
+                    storageItem.iconPath = new vscode.ThemeIcon('database');
+                    items.push(storageItem);
+                }
+
+                // Add Configurations root node
+                const configurationsItem = new TreeItem(
+                    'Configurations',
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    'configurations'
                 );
-                storageItem.description = `${this.tables.length} tables`;
-                storageItem.tooltip = 'Keboola Storage tables and buckets';
-                storageItem.iconPath = new vscode.ThemeIcon('database');
-                items.push(storageItem);
+                configurationsItem.description = 'Manage project configurations';
+                configurationsItem.tooltip = 'Project configurations organized by branches and components';
+                configurationsItem.iconPath = new vscode.ThemeIcon('gear');
+                items.push(configurationsItem);
             }
             
             return Promise.resolve(items);
@@ -105,6 +128,55 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             });
             
             return Promise.resolve(stageItems);
+
+        } else if (element.contextValue === 'configurations') {
+            // Show configurations tree
+            const configurationChildren = await this.configurationsProvider.getChildren();
+            
+            // Convert ConfigurationTreeItem to TreeItem
+            return Promise.resolve(configurationChildren.map(configItem => {
+                const treeItem = new TreeItem(
+                    configItem.label,
+                    configItem.collapsibleState,
+                    configItem.contextValue
+                );
+                treeItem.description = configItem.description;
+                treeItem.tooltip = configItem.tooltip;
+                treeItem.iconPath = configItem.iconPath;
+                
+                // Copy configuration-specific properties
+                treeItem.branch = configItem.branch;
+                treeItem.category = configItem.category;
+                treeItem.component = configItem.component;
+                treeItem.configuration = configItem.configuration;
+                
+                return treeItem;
+            }));
+            
+        } else if (['branch', 'category', 'component'].includes(element.contextValue || '')) {
+            // Delegate configuration tree logic to ConfigurationsTreeProvider
+            const configurationTreeItem = this.convertToConfigurationTreeItem(element);
+            const configurationChildren = await this.configurationsProvider.getChildren(configurationTreeItem);
+            
+            // Convert back to TreeItem
+            return Promise.resolve(configurationChildren.map(configItem => {
+                const treeItem = new TreeItem(
+                    configItem.label,
+                    configItem.collapsibleState,
+                    configItem.contextValue
+                );
+                treeItem.description = configItem.description;
+                treeItem.tooltip = configItem.tooltip;
+                treeItem.iconPath = configItem.iconPath;
+                
+                // Copy configuration-specific properties
+                treeItem.branch = configItem.branch;
+                treeItem.category = configItem.category;
+                treeItem.component = configItem.component;
+                treeItem.configuration = configItem.configuration;
+                
+                return treeItem;
+            }));
             
         } else if (element.contextValue === 'stage' && element.stage) {
             // Show buckets in the stage
@@ -182,6 +254,27 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             .sort((a, b) => a.displayName.localeCompare(b.displayName));
     }
 
+    private convertToConfigurationTreeItem(element: TreeItem): ConfigurationTreeItem {
+        const configItem = new ConfigurationTreeItem(
+            element.label,
+            element.collapsibleState,
+            element.contextValue || ''
+        );
+        configItem.description = element.description;
+        configItem.tooltip = element.tooltip;
+        configItem.iconPath = element.iconPath;
+        configItem.branch = element.branch;
+        configItem.category = element.category;
+        configItem.component = element.component;
+        configItem.configuration = element.configuration;
+        return configItem;
+    }
+
+    // Public method to get branch by ID (used by commands)
+    getBranchById(branchId: string): KeboolaBranch | undefined {
+        return this.configurationsProvider.getBranchById(branchId);
+    }
+
     // Public method to get table by ID (used by commands)
     getTableById(tableId: string): KeboolaTable | undefined {
         return this.tables.find(table => table.id === tableId);
@@ -200,4 +293,10 @@ export class TreeItem extends vscode.TreeItem {
     stage?: string;
     bucket?: { id: string; name: string };
     table?: KeboolaTable;
+    
+    // Configuration-related properties
+    branch?: KeboolaBranch;
+    category?: string;
+    component?: KeboolaComponent;
+    configuration?: KeboolaConfiguration;
 } 

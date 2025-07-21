@@ -514,4 +514,223 @@ export class KeboolaApi {
         }
         return 'unknown';
     }
+
+    // New methods for v3.0.0 Configurations API
+
+    /**
+     * List all development branches
+     */
+    async listBranches(): Promise<KeboolaBranch[]> {
+        try {
+            const response = await this.makeRequest('/v2/storage/dev-branches');
+            
+            if (!Array.isArray(response)) {
+                throw new KeboolaApiError('Invalid response format: expected array of branches');
+            }
+
+            return response.map(branch => ({
+                id: branch.id,
+                name: branch.name || `Branch ${branch.id}`,
+                description: branch.description,
+                isDefault: branch.isDefault || false,
+                created: branch.created || '',
+                createdBy: {
+                    id: branch.createdBy?.id || '',
+                    name: branch.createdBy?.name || 'Unknown'
+                }
+            }));
+        } catch (error) {
+            if (error instanceof KeboolaApiError) {
+                throw error;
+            }
+            throw new KeboolaApiError(`Failed to list branches: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Get detailed information about a specific branch
+     */
+    async getBranchDetail(branchId: string): Promise<KeboolaBranchDetail> {
+        try {
+            const response = await this.makeRequest(`/v2/storage/dev-branches/${encodeURIComponent(branchId)}`);
+            
+            return {
+                id: response.id,
+                name: response.name || `Branch ${response.id}`,
+                description: response.description,
+                isDefault: response.isDefault || false,
+                created: response.created || '',
+                createdBy: {
+                    id: response.createdBy?.id || '',
+                    name: response.createdBy?.name || 'Unknown'
+                },
+                metadata: response.metadata || []
+            };
+        } catch (error) {
+            if (error instanceof KeboolaApiError) {
+                throw error;
+            }
+            throw new KeboolaApiError(`Failed to get branch detail: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * List all components and their configurations for a specific branch
+     */
+    async listComponents(branchId: string): Promise<KeboolaComponent[]> {
+        try {
+            const response = await this.makeRequest(`/v2/storage/branch/${encodeURIComponent(branchId)}/components`);
+            
+            if (!Array.isArray(response)) {
+                throw new KeboolaApiError('Invalid response format: expected array of components');
+            }
+
+            return response.map(component => ({
+                id: component.id,
+                name: component.name || component.id,
+                description: component.description,
+                type: this.normalizeComponentType(component.type),
+                uri: component.uri,
+                ico32: component.ico32,
+                ico64: component.ico64,
+                configurations: (component.configurations || []).map((config: any) => ({
+                    id: config.id,
+                    name: config.name || `Configuration ${config.id}`,
+                    description: config.description,
+                    created: config.created || '',
+                    createdBy: config.createdBy ? {
+                        id: config.createdBy.id || '',
+                        name: config.createdBy.name || 'Unknown'
+                    } : undefined,
+                    version: config.version || 1,
+                    changeDescription: config.changeDescription,
+                    isDeleted: config.isDeleted || false,
+                    configuration: config.configuration
+                }))
+            }));
+        } catch (error) {
+            if (error instanceof KeboolaApiError) {
+                throw error;
+            }
+            throw new KeboolaApiError(`Failed to list components: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Get detailed information about a specific configuration
+     */
+    async getConfigurationDetail(componentId: string, configurationId: string, branchId: string): Promise<KeboolaConfigurationDetail> {
+        try {
+            const response = await this.makeRequest(`/v2/storage/branch/${encodeURIComponent(branchId)}/components/${encodeURIComponent(componentId)}/configs/${encodeURIComponent(configurationId)}`);
+            
+            return {
+                id: response.id,
+                name: response.name || `Configuration ${response.id}`,
+                description: response.description,
+                created: response.created || '',
+                createdBy: response.createdBy ? {
+                    id: response.createdBy.id || '',
+                    name: response.createdBy.name || 'Unknown'
+                } : undefined,
+                version: response.version || 1,
+                changeDescription: response.changeDescription,
+                isDeleted: response.isDeleted || false,
+                configuration: response.configuration || {},
+                componentId: componentId,
+                branchId: branchId
+            };
+        } catch (error) {
+            if (error instanceof KeboolaApiError) {
+                throw error;
+            }
+            throw new KeboolaApiError(`Failed to get configuration detail: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Normalize component type to match our enum
+     */
+    private normalizeComponentType(type: string): 'extractor' | 'writer' | 'transformation' | 'application' | 'other' {
+        if (!type) return 'other';
+        
+        const lowerType = type.toLowerCase();
+        if (lowerType.includes('extractor')) return 'extractor';
+        if (lowerType.includes('writer')) return 'writer';
+        if (lowerType.includes('transformation')) return 'transformation';
+        if (lowerType.includes('application') || lowerType.includes('app')) return 'application';
+        
+        return 'other';
+    }
+}
+
+// New interfaces for v3.0.0 Configurations
+export interface KeboolaBranch {
+    id: string;
+    name: string;
+    description?: string;
+    isDefault: boolean;
+    created: string;
+    createdBy: {
+        id: string;
+        name: string;
+    };
+}
+
+export interface KeboolaBranchDetail {
+    id: string;
+    name: string;
+    description?: string;
+    isDefault: boolean;
+    created: string;
+    createdBy: {
+        id: string;
+        name: string;
+    };
+    metadata: Array<{
+        key: string;
+        value: string;
+    }>;
+}
+
+export interface KeboolaComponent {
+    id: string;
+    name: string;
+    description?: string;
+    type: 'extractor' | 'writer' | 'transformation' | 'application' | 'other';
+    uri?: string;
+    ico32?: string;
+    ico64?: string;
+    configurations: KeboolaConfiguration[];
+}
+
+export interface KeboolaConfiguration {
+    id: string;
+    name: string;
+    description?: string;
+    created: string;
+    createdBy?: {
+        id: string;
+        name: string;
+    };
+    version: number;
+    changeDescription?: string;
+    isDeleted: boolean;
+    configuration?: any;
+}
+
+export interface KeboolaConfigurationDetail {
+    id: string;
+    name: string;
+    description?: string;
+    created: string;
+    createdBy?: {
+        id: string;
+        name: string;
+    };
+    version: number;
+    changeDescription?: string;
+    isDeleted: boolean;
+    configuration: any;
+    componentId: string;
+    branchId: string;
 } 

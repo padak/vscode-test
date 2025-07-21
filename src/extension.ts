@@ -5,6 +5,7 @@ import { TableDetailPanel } from './TableDetailPanel';
 import { BucketDetailPanel } from './BucketDetailPanel';
 import { StageDetailPanel } from './StageDetailPanel';
 import { SettingsPanel } from './SettingsPanel';
+import { ConfigurationsPanel } from './ConfigurationsPanel';
 
 let keboolaApi: KeboolaApi | undefined;
 let treeProvider: KeboolaTreeProvider;
@@ -79,6 +80,11 @@ function registerCommands(context: vscode.ExtensionContext) {
         treeProvider.refresh();
     });
 
+    // Refresh configurations only
+    const refreshConfigurationsCmd = vscode.commands.registerCommand('keboola.refreshConfigurations', () => {
+        treeProvider.refreshConfigurations();
+    });
+
     // Set row limit (now opens settings panel)
     const setRowLimitCmd = vscode.commands.registerCommand('keboola.setRowLimit', () => {
         SettingsPanel.createOrShow(context, context.extensionUri);
@@ -114,15 +120,38 @@ function registerCommands(context: vscode.ExtensionContext) {
         await showStageDetails(item.stage, context);
     });
 
+    // Show branch details
+    const showBranchCmd = vscode.commands.registerCommand('keboola.showBranch', async (item?: TreeItem) => {
+        if (!item || !item.branch) {
+            vscode.window.showErrorMessage('No branch selected');
+            return;
+        }
+
+        await showBranchDetails(item.branch.id, context);
+    });
+
+    // Show configuration details (opens JSON in new tab)
+    const showConfigurationCmd = vscode.commands.registerCommand('keboola.showConfiguration', async (item?: TreeItem) => {
+        if (!item || !item.configuration || !item.component || !item.branch) {
+            vscode.window.showErrorMessage('No configuration selected');
+            return;
+        }
+
+        await showConfigurationDetails(item.component.id, item.configuration.id, item.branch.id, context);
+    });
+
     // Add all commands to subscriptions
     context.subscriptions.push(
         settingsCmd,
         configureCmd,
         refreshCmd,
+        refreshConfigurationsCmd,
         setRowLimitCmd,
         showTableCmd,
         showBucketCmd,
-        showStageCmd
+        showStageCmd,
+        showBranchCmd,
+        showConfigurationCmd
     );
 }
 
@@ -272,6 +301,116 @@ async function showStageDetails(stage: string, context: vscode.ExtensionContext)
             vscode.window.showErrorMessage(`Failed to load stage: ${error.message}`);
         } else {
             vscode.window.showErrorMessage(`Failed to load stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+}
+
+async function showBranchDetails(branchId: string, context: vscode.ExtensionContext) {
+    try {
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
+            return;
+        }
+
+        // Ensure API is initialized with current settings
+        if (!keboolaApi || keboolaApi.apiUrl !== settings.apiUrl || keboolaApi.token !== settings.token) {
+            keboolaApi = new KeboolaApi({ 
+                apiUrl: settings.apiUrl, 
+                token: settings.token 
+            });
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Loading branch details...",
+            cancellable: false
+        }, async () => {
+            const branchDetail = await keboolaApi!.getBranchDetail(branchId);
+
+            ConfigurationsPanel.createOrShow(
+                branchDetail,
+                context.extensionUri,
+                keboolaApi
+            );
+        });
+    } catch (error) {
+        console.error('Failed to load branch details:', error);
+        if (error instanceof KeboolaApiError) {
+            vscode.window.showErrorMessage(`Failed to load branch: ${error.message}`);
+        } else {
+            vscode.window.showErrorMessage(`Failed to load branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+}
+
+async function showConfigurationDetails(componentId: string, configurationId: string, branchId: string, context: vscode.ExtensionContext) {
+    try {
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
+            return;
+        }
+
+        // Ensure API is initialized with current settings
+        if (!keboolaApi || keboolaApi.apiUrl !== settings.apiUrl || keboolaApi.token !== settings.token) {
+            keboolaApi = new KeboolaApi({ 
+                apiUrl: settings.apiUrl, 
+                token: settings.token 
+            });
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Loading configuration details...",
+            cancellable: false
+        }, async () => {
+            const configDetail = await keboolaApi!.getConfigurationDetail(componentId, configurationId, branchId);
+
+            // Open configuration JSON in a new read-only editor tab
+            const configJson = JSON.stringify(configDetail.configuration, null, 2);
+            const doc = await vscode.workspace.openTextDocument({
+                content: configJson,
+                language: 'json'
+            });
+
+            await vscode.window.showTextDocument(doc, {
+                preview: false,
+                viewColumn: vscode.ViewColumn.One
+            });
+
+            // Show notification with basic info
+            vscode.window.showInformationMessage(`Configuration JSON opened: ${configDetail.name} v${configDetail.version}`);
+
+            // Also show the configuration panel with metadata
+            ConfigurationsPanel.createOrShow(
+                configDetail,
+                context.extensionUri,
+                keboolaApi
+            );
+        });
+    } catch (error) {
+        console.error('Failed to load configuration details:', error);
+        if (error instanceof KeboolaApiError) {
+            vscode.window.showErrorMessage(`Failed to load configuration: ${error.message}`);
+        } else {
+            vscode.window.showErrorMessage(`Failed to load configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 }
