@@ -19,6 +19,7 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.5.4   | 262KB     | 2025-01-21   | Working Test Connection with token validation |
 | 2.5.3   | 265KB     | 2025-01-21   | UI consistency fixes, refresh buttons |
 | 2.5.2   | 261KB     | 2025-01-21   | Stage export fixes, empty table handling |
 | 2.5.1   | 259KB     | 2025-01-21   | Stage detail panels and export |
@@ -56,10 +57,10 @@ builds/
 
 ## 🎯 Latest Build
 
-**Current Version:** `2.5.3`
-**File:** `keboola-storage-api-explorer-2.5.3.vsix`
-**Size:** 265KB
-**Features:** UI consistency across all detail panels, refresh functionality
+**Current Version:** `2.5.4`
+**File:** `keboola-storage-api-explorer-2.5.4.vsix`
+**Size:** 262KB
+**Features:** Working Test Connection with detailed token validation and project information
 
 ## ⚙️ Build Configuration
 

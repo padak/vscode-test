@@ -295,19 +295,28 @@ export class SettingsPanel {
             });
 
             const api = new KeboolaApi({ apiUrl, token });
-            const isConnected = await api.testConnection();
+            const result = await api.testConnection();
 
-            if (isConnected) {
+            if (result.success && result.tokenInfo) {
+                // Extract useful information from token verification
+                const tokenDetails = result.tokenInfo;
+                const projectName = tokenDetails.owner?.name || 'Unknown Project';
+                const tokenDescription = tokenDetails.description || 'No description';
+                const expiresAt = tokenDetails.expires ? new Date(tokenDetails.expires).toLocaleDateString() : 'Never';
+                
                 this.panel.webview.postMessage({
                     command: 'showMessage',
                     type: 'success',
-                    text: '✅ Connection successful!'
+                    text: `✅ Connection successful!<br>
+                           📊 Project: ${projectName}<br>
+                           🏷️ Token: ${tokenDescription}<br>
+                           ⏰ Expires: ${expiresAt}`
                 });
             } else {
                 this.panel.webview.postMessage({
                     command: 'showMessage',
                     type: 'error',
-                    text: '❌ Connection failed. Please check your credentials.'
+                    text: `❌ Connection failed: ${result.error || 'Please check your credentials.'}`
                 });
             }
 
@@ -804,17 +813,18 @@ export class SettingsPanel {
                     const container = document.getElementById('messageContainer');
                     const messageDiv = document.createElement('div');
                     messageDiv.className = \`message \${type}\`;
-                    messageDiv.textContent = text;
+                    messageDiv.innerHTML = text; // Use innerHTML to support HTML content like <br>
                     
                     container.innerHTML = '';
                     container.appendChild(messageDiv);
                     
-                    // Auto-hide after 5 seconds
+                    // Auto-hide success messages after 8 seconds, errors after 10 seconds
+                    const timeout = type === 'success' ? 8000 : 10000;
                     setTimeout(() => {
                         if (container.contains(messageDiv)) {
                             container.removeChild(messageDiv);
                         }
-                    }, 5000);
+                    }, timeout);
                 }
                 
                 // Listen for messages from the extension

@@ -5,6 +5,104 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.4] - 2025-01-21
+
+### 🔐 Enhanced Connection Testing
+- **FIXED: Test Connection Button**: Now properly validates API tokens using Keboola Token Verification endpoint
+- **Enhanced Token Validation**: Uses `/v2/storage/tokens/verify` endpoint for accurate authentication testing
+- **Detailed Connection Feedback**: Shows project name, token description, and expiration date on successful connection
+- **Improved Error Messages**: Displays specific error details when connection fails
+- **Better User Experience**: Extended message display time for success (8s) and error (10s) messages
+
+### ✨ Added
+- **Token Verification API**: Proper integration with Keboola's token verification endpoint
+- **Project Information Display**: Shows project name from token verification response
+- **Token Details**: Displays token description and expiration date in connection test results
+- **HTML Message Support**: Connection test results now support formatted text with line breaks
+- **Enhanced Error Handling**: Specific error messages from API responses
+
+### 🔧 Technical Improvements
+#### **Before (Non-functional):**
+```javascript
+// testConnection() - No actual functionality
+async testConnection(): Promise<boolean> {
+    try {
+        await this.makeRequest('/v2/storage');  // Basic endpoint, no validation
+        return true;
+    } catch {
+        return false;  // No error details
+    }
+}
+```
+
+#### **After (Functional with Details):**
+```javascript
+// testConnection() - Real token validation with details
+async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: string}> {
+    try {
+        const tokenInfo = await this.makeRequest('/v2/storage/tokens/verify');
+        return { success: true, tokenInfo: tokenInfo };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+```
+
+### 🎯 Connection Test Results
+#### **Success Message Format:**
+```
+✅ Connection successful!
+📊 Project: My Keboola Project
+🏷️ Token: Production API Token
+⏰ Expires: 12/31/2025
+```
+
+#### **Error Message Format:**
+```
+❌ Connection failed: Invalid token or insufficient permissions
+```
+
+### 🔐 API Integration Details
+- **Endpoint Used**: `GET /v2/storage/tokens/verify`
+- **Response Data**: Project details, token metadata, expiration info
+- **Error Handling**: Specific API error messages passed to user
+- **Authentication**: Uses existing stored API URL and token from settings
+
+### 🌐 Keboola API Documentation
+- **Token Detail**: [/tokens/token](https://keboola.docs.apiary.io/#reference/tokens-and-permissions/token/token-detail)
+- **Token Verification**: [/tokens/verify](https://keboola.docs.apiary.io/#reference/tokens-and-permissions/token-verification/token-verification)
+
+### 🔄 Updated Components
+- **SettingsPanel.ts**: Enhanced `handleTestConnection()` with detailed feedback
+- **keboolaApi.ts**: Updated `testConnection()` to use verification endpoint
+- **KeboolaTreeProvider.ts**: Updated to handle new `testConnection()` return format
+- **WebView Messaging**: Added HTML support for formatted test results
+
+### 📱 User Experience Improvements
+- **Immediate Feedback**: "Testing connection..." message shown during API call
+- **Detailed Success Info**: Project name, token description, and expiration displayed
+- **Clear Error Messages**: Specific API errors instead of generic failure message
+- **Extended Display Time**: Success messages visible for 8 seconds, errors for 10 seconds
+- **HTML Formatting**: Line breaks and emoji icons for better readability
+
+### 🎯 Use Cases
+- **Token Validation**: Verify API tokens before starting work
+- **Project Verification**: Confirm connection to correct Keboola project
+- **Token Expiration Check**: See when tokens will expire
+- **Troubleshooting**: Get specific error messages for connection issues
+- **Multi-Project Setup**: Verify which project the token belongs to
+
+### 🔧 Technical Benefits
+- **Real API Validation**: Uses official Keboola token verification endpoint
+- **Rich Response Data**: Access to project and token metadata
+- **Better Error Debugging**: Specific error messages from API responses
+- **Type Safety**: Proper TypeScript interfaces for API responses
+- **Consistent UX**: HTML-formatted messages with proper styling
+
+**The Test Connection button now provides real, detailed validation with project information and token details!** 🔐✨
+
+---
+
 ## [2.5.3] - 2025-01-21
 
 ### 🎨 UI Consistency & Enhancement

@@ -159,12 +159,19 @@ export class KeboolaApi {
     /**
      * Test the API connection by fetching basic info
      */
-    async testConnection(): Promise<boolean> {
+    async testConnection(): Promise<{success: boolean, tokenInfo?: any, error?: string}> {
         try {
-            await this.makeRequest('/v2/storage');
-            return true;
-        } catch {
-            return false;
+            // Use token verification endpoint for proper validation
+            const tokenInfo = await this.makeRequest('/v2/storage/tokens/verify');
+            return {
+                success: true,
+                tokenInfo: tokenInfo
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
         }
     }
 

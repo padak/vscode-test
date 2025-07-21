@@ -33,7 +33,8 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 
         try {
             // Test connection first
-            this.isApiConnected = await this.keboolaApi.testConnection();
+            const connectionResult = await this.keboolaApi.testConnection();
+            this.isApiConnected = connectionResult.success;
             
             if (this.isApiConnected) {
                 // Load real data from Keboola API
