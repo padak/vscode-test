@@ -3,6 +3,7 @@ import { KeboolaApi, KeboolaApiError } from './keboolaApi';
 import { KeboolaTreeProvider, TreeItem } from './KeboolaTreeProvider';
 import { TableDetailPanel } from './TableDetailPanel';
 import { BucketDetailPanel } from './BucketDetailPanel';
+import { StageDetailPanel } from './StageDetailPanel';
 import { SettingsPanel } from './SettingsPanel';
 
 let keboolaApi: KeboolaApi | undefined;
@@ -103,6 +104,16 @@ function registerCommands(context: vscode.ExtensionContext) {
         await showBucketDetails(item.bucket.id, context);
     });
 
+    // Show stage details
+    const showStageCmd = vscode.commands.registerCommand('keboola.showStage', async (item?: TreeItem) => {
+        if (!item || !item.stage) {
+            vscode.window.showErrorMessage('No stage selected');
+            return;
+        }
+
+        await showStageDetails(item.stage, context);
+    });
+
     // Add all commands to subscriptions
     context.subscriptions.push(
         settingsCmd,
@@ -110,7 +121,8 @@ function registerCommands(context: vscode.ExtensionContext) {
         refreshCmd,
         setRowLimitCmd,
         showTableCmd,
-        showBucketCmd
+        showBucketCmd,
+        showStageCmd
     );
 }
 
@@ -210,6 +222,56 @@ async function showBucketDetails(bucketId: string, context: vscode.ExtensionCont
             vscode.window.showErrorMessage(`Failed to load bucket: ${error.message}`);
         } else {
             vscode.window.showErrorMessage(`Failed to load bucket: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+}
+
+async function showStageDetails(stage: string, context: vscode.ExtensionContext) {
+    try {
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
+            return;
+        }
+
+        // Ensure API is initialized with current settings
+        if (!keboolaApi || keboolaApi.apiUrl !== settings.apiUrl || keboolaApi.token !== settings.token) {
+            keboolaApi = new KeboolaApi({ 
+                apiUrl: settings.apiUrl, 
+                token: settings.token 
+            });
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Loading ${stage.toUpperCase()} stage details...`,
+            cancellable: false
+        }, async () => {
+            const stageDetail = await keboolaApi!.getStageDetail(stage);
+
+            StageDetailPanel.createOrShow(
+                stageDetail,
+                context.extensionUri,
+                keboolaApi,
+                settings.previewRowLimit,
+                settings.exportRowLimit,
+                context
+            );
+        });
+    } catch (error) {
+        console.error('Failed to load stage details:', error);
+        if (error instanceof KeboolaApiError) {
+            vscode.window.showErrorMessage(`Failed to load stage: ${error.message}`);
+        } else {
+            vscode.window.showErrorMessage(`Failed to load stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 }

@@ -2,7 +2,7 @@
 	"name": "keboola-storage-api-explorer",
 	"displayName": "Keboola Storage API Explorer",
 	"description": "Browse and explore Keboola Storage tables via direct API calls",
-	"version": "2.4.1",
+	"version": "2.5.3",
 	"publisher": "keboola",
 	"engines": {
 		"vscode": "^1.74.0"
@@ -63,6 +63,11 @@
 				"command": "keboola.showBucket",
 				"title": "Show Bucket Details",
 				"icon": "$(folder-opened)"
+			},
+			{
+				"command": "keboola.showStage",
+				"title": "Show Stage Details",
+				"icon": "$(layers)"
 			}
 		],
 		"menus": {
@@ -88,6 +93,11 @@
 					"command": "keboola.showBucket",
 					"when": "view == keboolaExplorer && viewItem == bucket",
 					"group": "inline"
+				},
+				{
+					"command": "keboola.showStage",
+					"when": "view == keboolaExplorer && viewItem == stage",
+					"group": "inline"
 				}
 			],
 			"commandPalette": [
@@ -106,6 +116,10 @@
 				{
 					"command": "keboola.refresh",
 					"title": "Keboola: Refresh Storage"
+				},
+				{
+					"command": "keboola.showStage",
+					"title": "Keboola: Show Stage Details"
 				}
 			]
 		},

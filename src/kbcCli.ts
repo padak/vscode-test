@@ -339,9 +339,59 @@ export async function exportTable(
 
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            outputChannel.appendLine(`❌ Export failed: ${message}`);
-            outputChannel.show(true); // Show output on error
-            throw error;
+            
+            // Handle KBC CLI bug with empty tables: "Error: Max must be greater than 0"
+            if (message.includes('Max must be greater than 0') || message.includes('Downloading   0%')) {
+                outputChannel.appendLine(`⚠️ Detected empty table issue (KBC CLI bug with 0-byte tables)`);
+                outputChannel.appendLine(`📝 Creating empty CSV file as workaround...`);
+                
+                                 try {
+                     // Recreate file paths (variables are in try block scope)
+                     const outputDir = exportOptions.outputDirectory || '.'; // fallback
+                     const fileName = `${tableId.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
+                     const outputPath = path.join(outputDir, fileName);
+                     
+                     // Create empty CSV file with headers if requested
+                     let csvContent = '';
+                     if (exportSettings.includeHeaders) {
+                         // We can't get column names from failed export, so create minimal header
+                         csvContent = '# Empty table: no data available\n';
+                     }
+                     
+                     fs.writeFileSync(outputPath, csvContent);
+                     
+                     outputChannel.appendLine(`✅ Empty table ${tableId} handled successfully`);
+                     outputChannel.appendLine(`📁 Location: ${outputPath}`);
+                     outputChannel.appendLine(`📊 Rows: 0 (empty table)`);
+                     outputChannel.appendLine(`📋 Headers: ${exportSettings.includeHeaders ? 'minimal header created' : 'no headers'}`);
+                     
+                     // Export schema if requested
+                     if (exportOptions.includeSchema) {
+                         await exportTableSchema(tableId, options, outputDir);
+                         outputChannel.appendLine(`📋 Schema exported to ${tableId}.schema.json`);
+                     }
+                     
+                     vscode.window.showWarningMessage(
+                         `Table ${tableId} is empty - created placeholder file at ${outputPath}`,
+                         'Open File'
+                     ).then(choice => {
+                         if (choice === 'Open File') {
+                             vscode.commands.executeCommand('vscode.open', vscode.Uri.file(outputPath));
+                         }
+                     });
+                     
+                     return outputPath;
+                    
+                } catch (fileError) {
+                    outputChannel.appendLine(`❌ Failed to create empty file: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`);
+                    outputChannel.show(true);
+                    throw error; // Throw original error
+                }
+            } else {
+                outputChannel.appendLine(`❌ Export failed: ${message}`);
+                outputChannel.show(true); // Show output on error
+                throw error;
+            }
         }
     });
 }
@@ -407,10 +457,12 @@ export async function exportBucket(
     bucketId: string, 
     options: KbcCliOptions,
     defaultSettings: ExportSettings,
-    exportOptions: ExportOptions = {}
+    exportOptions: ExportOptions = {},
+    bucketTables?: Array<{id: string, displayName?: string, name?: string}>
 ): Promise<string> {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine(`\n=== Starting bucket export: ${bucketId} ===`);
+    outputChannel.show(true); // Show output channel to user
     
     // Get export settings (either from options or prompt user)
     let exportSettings: ExportSettings;
@@ -451,13 +503,29 @@ export async function exportBucket(
 
             // Get tables in bucket
             progress.report({ increment: 10, message: "Getting tables list..." });
-            const tablesJson = await executeKbcCommand([
-                'remote', 'table', 'list',
-                '--bucket-id', bucketId,
-                '--format', 'json'
-            ], options);
+            
+            let tables: Array<{id: string, name?: string, displayName?: string}>;
+            
+            if (bucketTables && bucketTables.length > 0) {
+                // Use provided bucket tables (from API call)
+                tables = bucketTables;
+                outputChannel.appendLine(`Using provided table list: ${bucketTables.length} tables`);
+            } else {
+                // Fallback: get all tables and filter by bucket prefix
+                outputChannel.appendLine(`No table list provided, fetching all tables and filtering...`);
+                const allTablesJson = await executeKbcCommand([
+                    'remote', 'table', 'list',
+                    '--format', 'json'
+                ], options);
 
-            const tables = JSON.parse(tablesJson);
+                const allTables = JSON.parse(allTablesJson);
+                
+                // Filter tables that belong to this bucket
+                tables = allTables.filter((table: any) => 
+                    table.id && table.id.startsWith(bucketId + '.')
+                );
+                outputChannel.appendLine(`Filtered ${tables.length} tables from ${allTables.length} total tables`);
+            }
             
             if (tables.length === 0) {
                 vscode.window.showInformationMessage(`Bucket ${bucketId} contains no tables`);
@@ -478,7 +546,7 @@ export async function exportBucket(
                 
                 progress.report({ 
                     increment: progressIncrement,
-                    message: `Exported ${i + 1}/${tables.length} tables (currently: ${table.name})`
+                    message: `Exported ${i + 1}/${tables.length} tables (currently: ${table.displayName || table.name || table.id})`
                 });
 
                 outputChannel.appendLine(`Exporting table ${i + 1}/${tables.length}: ${table.id}`);
@@ -501,7 +569,14 @@ export async function exportBucket(
 
             // Export bucket schema
             if (exportOptions.includeSchema) {
-                await exportBucketSchema(bucketId, options, bucketDir);
+                const bucketDetailForSchema = {
+                    id: bucketId,
+                    displayName: bucketId,
+                    description: '',
+                    created: '',
+                    tables: tables
+                };
+                await exportBucketSchema(bucketId, options, bucketDir, bucketDetailForSchema);
             }
 
             progress.report({ increment: 5, message: "Complete!" });
@@ -521,6 +596,7 @@ export async function exportBucket(
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             outputChannel.appendLine(`❌ Bucket export failed: ${message}`);
+            outputChannel.show(true); // Show output on error
             throw error;
         }
     });
@@ -532,28 +608,50 @@ export async function exportBucket(
 export async function exportBucketSchema(
     bucketId: string, 
     options: KbcCliOptions,
-    outputDir: string
+    outputDir: string,
+    bucketDetail?: {id: string, displayName?: string, description?: string, created?: string, tables: Array<{id: string, displayName?: string, name?: string}>}
 ): Promise<string> {
     const outputChannel = getOutputChannel();
+    outputChannel.appendLine(`\n=== Starting bucket schema export: ${bucketId} ===`);
+    outputChannel.show(true); // Show output channel to user
     
     try {
-        // Get bucket info
-        const bucketInfoJson = await executeKbcCommand([
-            'remote', 'bucket', 'detail',
-            bucketId,
-            '--format', 'json'
-        ], options);
-
-        const bucketInfo = JSON.parse(bucketInfoJson);
+        let bucketInfo: any;
+        let tables: Array<{id: string, displayName?: string, name?: string}>;
         
-        // Get tables in bucket
-        const tablesJson = await executeKbcCommand([
-            'remote', 'table', 'list',
-            '--bucket-id', bucketId,
-            '--format', 'json'
-        ], options);
+        if (bucketDetail) {
+            // Use provided bucket detail data
+            bucketInfo = {
+                id: bucketDetail.id,
+                name: bucketDetail.displayName,
+                description: bucketDetail.description,
+                created: bucketDetail.created
+            };
+            tables = bucketDetail.tables;
+            outputChannel.appendLine(`Using provided bucket detail for ${tables.length} tables`);
+        } else {
+            // Fallback: get bucket info via CLI
+            outputChannel.appendLine(`No bucket detail provided, fetching via CLI...`);
+            const bucketInfoJson = await executeKbcCommand([
+                'remote', 'bucket', 'detail',
+                bucketId,
+                '--format', 'json'
+            ], options);
 
-        const tables = JSON.parse(tablesJson);
+            bucketInfo = JSON.parse(bucketInfoJson);
+            
+            // Get all tables and filter by bucket prefix (no --bucket-id flag exists)
+            const allTablesJson = await executeKbcCommand([
+                'remote', 'table', 'list',
+                '--format', 'json'
+            ], options);
+
+            const allTables = JSON.parse(allTablesJson);
+            tables = allTables.filter((table: any) => 
+                table.id && table.id.startsWith(bucketId + '.')
+            );
+            outputChannel.appendLine(`Filtered ${tables.length} tables from ${allTables.length} total tables`);
+        }
 
         // Create bucket schema object
         const schema = {
@@ -589,7 +687,8 @@ export async function exportBucketSchema(
 
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        outputChannel.appendLine(`Failed to export bucket schema: ${message}`);
+        outputChannel.appendLine(`❌ Failed to export bucket schema: ${message}`);
+        outputChannel.show(true); // Show output on error
         throw new KbcCliError(`Failed to export bucket schema: ${message}`);
     }
 }
@@ -601,10 +700,12 @@ export async function exportStage(
     stage: string, 
     options: KbcCliOptions,
     defaultSettings: ExportSettings,
-    exportOptions: ExportOptions = {}
+    exportOptions: ExportOptions = {},
+    stageDetail?: {id: string, buckets: Array<{id: string, displayName?: string, tables: Array<{id: string, displayName?: string, name?: string}>}>}
 ): Promise<string> {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine(`\n=== Starting stage export: ${stage} ===`);
+    outputChannel.show(true); // Show output channel to user
     
     // Get export settings (either from options or prompt user)
     let exportSettings: ExportSettings;
@@ -645,13 +746,17 @@ export async function exportStage(
 
             // Get buckets in stage
             progress.report({ increment: 10, message: "Getting buckets list..." });
-            const bucketsJson = await executeKbcCommand([
-                'remote', 'bucket', 'list',
-                '--format', 'json'
-            ], options);
-
-            const allBuckets = JSON.parse(bucketsJson);
-            const stageBuckets = allBuckets.filter((bucket: any) => bucket.stage === stage);
+            
+            let stageBuckets: Array<{id: string, displayName?: string, tables: Array<{id: string, displayName?: string, name?: string}>}>;
+            
+            if (stageDetail && stageDetail.buckets.length > 0) {
+                // Use provided stage detail data (from API call)
+                stageBuckets = stageDetail.buckets;
+                outputChannel.appendLine(`Using provided stage detail for ${stageBuckets.length} buckets`);
+            } else {
+                // This shouldn't happen since we pass stage detail from UI, but provide error
+                throw new Error(`No bucket data available for stage ${stage}. Stage detail data is required for export.`);
+            }
             
             if (stageBuckets.length === 0) {
                 vscode.window.showInformationMessage(`Stage ${stage} contains no buckets`);
@@ -672,7 +777,7 @@ export async function exportStage(
                 
                 progress.report({ 
                     increment: progressIncrement,
-                    message: `Exported ${i + 1}/${stageBuckets.length} buckets (currently: ${bucket.name})`
+                    message: `Exported ${i + 1}/${stageBuckets.length} buckets (currently: ${bucket.displayName || bucket.id})`
                 });
 
                 outputChannel.appendLine(`Exporting bucket ${i + 1}/${stageBuckets.length}: ${bucket.id}`);
@@ -683,7 +788,7 @@ export async function exportStage(
                     outputDirectory: stageDir,
                     rowLimit: exportSettings.rowLimit,
                     includeHeaders: exportSettings.includeHeaders
-                });
+                }, bucket.tables);
 
                 outputChannel.appendLine(`✅ Bucket ${bucket.id} exported successfully`);
             }
@@ -712,6 +817,7 @@ export async function exportStage(
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             outputChannel.appendLine(`❌ Stage export failed: ${message}`);
+            outputChannel.show(true); // Show output on error
             throw error;
         }
     });

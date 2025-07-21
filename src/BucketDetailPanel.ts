@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { KeboolaBucketDetail } from './keboolaApi';
+import { exportBucket, exportBucketSchema, KbcCliOptions, ExportSettings } from './kbcCli';
 
 export class BucketDetailPanel {
     public static currentPanel: BucketDetailPanel | undefined;
@@ -51,6 +52,25 @@ export class BucketDetailPanel {
     ) {
         this.panel = panel;
         this.updateContent(bucketDetail);
+
+        // Handle messages from the webview
+        this.panel.webview.onDidReceiveMessage(
+            async (message) => {
+                switch (message.command) {
+                    case 'exportBucket':
+                        await this.handleExportBucket(bucketDetail);
+                        break;
+                    case 'exportBucketSchema':
+                        await this.handleExportBucketSchema(bucketDetail);
+                        break;
+                    case 'refreshData':
+                        await this.handleRefreshData(bucketDetail);
+                        break;
+                }
+            },
+            null,
+            this.disposables
+        );
 
         // Listen for when the panel is disposed
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -325,6 +345,57 @@ export class BucketDetailPanel {
                     border-top: 1px solid var(--vscode-widget-border);
                     color: var(--vscode-descriptionForeground);
                 }
+
+                .actions-section {
+                    margin: 20px 0;
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 12px;
+                    margin: 16px 0;
+                    flex-wrap: wrap;
+                }
+
+                .action-button {
+                    background: var(--vscode-button-background);
+                    color: var(--vscode-button-foreground);
+                    border: none;
+                    border-radius: 6px;
+                    padding: 12px 20px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    min-width: 140px;
+                }
+
+                .action-button:hover {
+                    background: var(--vscode-button-hoverBackground);
+                    transform: translateY(-1px);
+                }
+
+                .action-button.secondary {
+                    background: var(--vscode-button-secondaryBackground);
+                    color: var(--vscode-button-secondaryForeground);
+                }
+
+                .action-button.secondary:hover {
+                    background: var(--vscode-button-secondaryHoverBackground);
+                }
+
+                .export-info {
+                    background: var(--vscode-textCodeBlock-background);
+                    border-left: 3px solid var(--vscode-textLink-foreground);
+                    padding: 12px 16px;
+                    margin: 12px 0;
+                    border-radius: 0 6px 6px 0;
+                    color: var(--vscode-editor-foreground);
+                    font-size: 13px;
+                }
             </style>
         </head>
         <body>
@@ -339,6 +410,24 @@ export class BucketDetailPanel {
                             ${safeDescription}
                         </div>
                     ` : ''}
+                </div>
+
+                <div class="actions-section">
+                    <h2 class="section-title">⚡ Actions</h2>
+                    <div class="action-buttons">
+                        <button class="action-button" onclick="exportBucket()">
+                            📤 Export Bucket
+                        </button>
+                        <button class="action-button secondary" onclick="exportBucketSchema()">
+                            📋 Export Schema Only
+                        </button>
+                        <button class="action-button secondary" onclick="refreshData()">
+                            🔄 Refresh Data
+                        </button>
+                    </div>
+                    <div class="export-info">
+                        💡 Export Bucket downloads all ${bucketDetail.tables.length} tables as CSV files with current export settings
+                    </div>
                 </div>
 
                 <div class="section">
@@ -415,6 +504,8 @@ export class BucketDetailPanel {
                     `}
                 </div>
 
+
+
                 ${bucketDetail.metadata.length > 0 ? `
                     <div class="section">
                         <h2 class="section-title">🏷️ Metadata (${bucketDetail.metadata.length})</h2>
@@ -432,8 +523,151 @@ export class BucketDetailPanel {
                     </div>
                 ` : ''}
             </div>
+
+            <script>
+                const vscode = acquireVsCodeApi();
+                
+                function exportBucket() {
+                    vscode.postMessage({ command: 'exportBucket' });
+                }
+                
+                function exportBucketSchema() {
+                    vscode.postMessage({ command: 'exportBucketSchema' });
+                }
+                
+                function refreshData() {
+                    vscode.postMessage({ command: 'refreshData' });
+                }
+            </script>
         </body>
         </html>`;
+    }
+
+    private async handleExportBucket(bucketDetail: KeboolaBucketDetail): Promise<void> {
+        try {
+            const apiUrl = this.context?.globalState.get<string>('keboola.apiUrl');
+            const token = this.context?.globalState.get<string>('keboola.token');
+
+            if (!apiUrl || !token) {
+                vscode.window.showErrorMessage('Please configure your Keboola connection in Settings first.');
+                return;
+            }
+
+            const cliOptions: KbcCliOptions = {
+                token,
+                host: apiUrl
+            };
+
+            const defaultSettings: ExportSettings = {
+                rowLimit: this.exportRowLimit,
+                includeHeaders: this.context?.globalState.get<boolean>('keboola.includeHeaders') ?? true
+            };
+
+            await exportBucket(bucketDetail.id, cliOptions, defaultSettings, {}, bucketDetail.tables);
+
+        } catch (error) {
+            console.error('Failed to export bucket:', error);
+            if (error instanceof Error) {
+                vscode.window.showErrorMessage(`Bucket export failed: ${error.message}`);
+            } else {
+                vscode.window.showErrorMessage(`Bucket export failed: Unknown error`);
+            }
+        }
+    }
+
+    private async handleExportBucketSchema(bucketDetail: KeboolaBucketDetail): Promise<void> {
+        try {
+            const apiUrl = this.context?.globalState.get<string>('keboola.apiUrl');
+            const token = this.context?.globalState.get<string>('keboola.token');
+
+            if (!apiUrl || !token) {
+                vscode.window.showErrorMessage('Please configure your Keboola connection in Settings first.');
+                return;
+            }
+
+            const cliOptions: KbcCliOptions = {
+                token,
+                host: apiUrl
+            };
+
+            const outputDir = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: 'Select Schema Export Directory'
+            }).then(result => result?.[0]?.fsPath);
+
+            if (!outputDir) {
+                return;
+            }
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Exporting bucket schema...",
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 50, message: "Fetching bucket metadata..." });
+
+                const schemaPath = await exportBucketSchema(bucketDetail.id, cliOptions, outputDir, bucketDetail);
+
+                progress.report({ increment: 50, message: "Complete!" });
+
+                vscode.window.showInformationMessage(
+                    `Bucket schema exported successfully to ${schemaPath}`,
+                    'Open File'
+                ).then(choice => {
+                    if (choice === 'Open File') {
+                        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(schemaPath));
+                    }
+                });
+            });
+
+        } catch (error) {
+            console.error('Failed to export bucket schema:', error);
+            if (error instanceof Error) {
+                vscode.window.showErrorMessage(`Bucket schema export failed: ${error.message}`);
+            } else {
+                vscode.window.showErrorMessage(`Bucket schema export failed: Unknown error`);
+            }
+        }
+    }
+
+    private async handleRefreshData(bucketDetail: KeboolaBucketDetail): Promise<void> {
+        try {
+            const apiUrl = this.context?.globalState.get<string>('keboola.apiUrl');
+            const token = this.context?.globalState.get<string>('keboola.token');
+
+            if (!apiUrl || !token) {
+                vscode.window.showErrorMessage('Please configure your Keboola connection in Settings first.');
+                return;
+            }
+
+            // Create new API instance
+            const { KeboolaApi } = await import('./keboolaApi');
+            const keboolaApi = new KeboolaApi({ apiUrl, token });
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Refreshing bucket data...",
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 50, message: "Fetching latest bucket details..." });
+
+                const refreshedBucketDetail = await keboolaApi.getBucketDetail(bucketDetail.id);
+                
+                progress.report({ increment: 50, message: "Updating display..." });
+
+                // Update the panel content with refreshed data
+                this.updateContent(refreshedBucketDetail);
+                
+                vscode.window.showInformationMessage(`Bucket data refreshed successfully`);
+            });
+
+        } catch (error) {
+            console.error('Failed to refresh bucket data:', error);
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            vscode.window.showErrorMessage(`Failed to refresh bucket data: ${message}`);
+        }
     }
 
     public dispose(): void {

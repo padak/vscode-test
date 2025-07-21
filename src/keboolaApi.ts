@@ -70,6 +70,33 @@ export interface KeboolaBucketDetail {
     }>;
 }
 
+export interface KeboolaStageDetail {
+    id: string;
+    name: string;
+    displayName: string;
+    description?: string;
+    buckets: Array<{
+        id: string;
+        name: string;
+        displayName: string;
+        description?: string;
+        created: string;
+        lastChangeDate: string;
+        dataSizeBytes: number;
+        tableCount: number;
+        tables: Array<{
+            id: string;
+            name: string;
+            displayName: string;
+            rowsCount: number;
+            dataSizeBytes: number;
+        }>;
+    }>;
+    totalBuckets: number;
+    totalTables: number;
+    totalDataSizeBytes: number;
+}
+
 export interface KeboolaTablePreview {
     columns: string[];
     rows: string[][];
@@ -240,6 +267,98 @@ export class KeboolaApi {
                 throw error;
             }
             throw new KeboolaApiError(`Failed to get bucket detail: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Get detailed information about a specific stage (aggregated from all buckets in that stage)
+     */
+    async getStageDetail(stage: string): Promise<KeboolaStageDetail> {
+        try {
+            // Get all tables to collect stage data
+            const allTables = await this.listTables();
+            
+            // Filter tables by stage and group by bucket
+            const stageTablesMap = new Map<string, any[]>();
+            const stageTables = allTables.filter(table => table.bucket.stage === stage);
+            
+            // Group tables by bucket
+            stageTables.forEach(table => {
+                const bucketId = table.bucket.id;
+                if (!stageTablesMap.has(bucketId)) {
+                    stageTablesMap.set(bucketId, []);
+                }
+                stageTablesMap.get(bucketId)!.push(table);
+            });
+
+            // Get detailed information for each bucket
+            const buckets = [];
+            let totalDataSizeBytes = 0;
+            let totalTables = 0;
+
+            for (const [bucketId, tables] of stageTablesMap) {
+                try {
+                    const bucketDetail = await this.getBucketDetail(bucketId);
+                    
+                    buckets.push({
+                        id: bucketDetail.id,
+                        name: bucketDetail.name,
+                        displayName: bucketDetail.displayName,
+                        description: bucketDetail.description,
+                        created: bucketDetail.created,
+                        lastChangeDate: bucketDetail.lastChangeDate,
+                        dataSizeBytes: bucketDetail.dataSizeBytes,
+                        tableCount: bucketDetail.tables.length,
+                        tables: bucketDetail.tables
+                    });
+                    
+                    totalDataSizeBytes += bucketDetail.dataSizeBytes;
+                    totalTables += bucketDetail.tables.length;
+                } catch (error) {
+                    // If bucket detail fails, use basic info from tables
+                    const bucketTables = tables.map(table => ({
+                        id: table.id,
+                        name: table.name,
+                        displayName: table.displayName,
+                        rowsCount: table.rowsCount,
+                        dataSizeBytes: table.dataSizeBytes
+                    }));
+                    
+                    buckets.push({
+                        id: bucketId,
+                        name: bucketId,
+                        displayName: bucketId,
+                        description: '',
+                        created: '',
+                        lastChangeDate: '',
+                        dataSizeBytes: tables.reduce((sum, t) => sum + t.dataSizeBytes, 0),
+                        tableCount: tables.length,
+                        tables: bucketTables
+                    });
+                    
+                    totalDataSizeBytes += tables.reduce((sum, t) => sum + t.dataSizeBytes, 0);
+                    totalTables += tables.length;
+                }
+            }
+
+            // Sort buckets by name
+            buckets.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+            return {
+                id: stage,
+                name: stage,
+                displayName: stage.toUpperCase(),
+                description: `${stage.toUpperCase()} stage containing ${buckets.length} buckets and ${totalTables} tables`,
+                buckets: buckets,
+                totalBuckets: buckets.length,
+                totalTables: totalTables,
+                totalDataSizeBytes: totalDataSizeBytes
+            };
+        } catch (error) {
+            if (error instanceof KeboolaApiError) {
+                throw error;
+            }
+            throw new KeboolaApiError(`Failed to get stage detail: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
