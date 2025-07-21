@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { KeboolaStageDetail } from './keboolaApi';
 import { exportStage, exportStageSchema, KbcCliOptions, ExportSettings } from './kbcCli';
 
@@ -505,7 +507,12 @@ export class StageDetailPanel {
                 includeHeaders: this.context?.globalState.get<boolean>('keboola.includeHeaders') ?? true
             };
 
-            await exportStage(stageDetail.id, cliOptions, defaultSettings, {}, stageDetail);
+            if (!this.context) {
+                vscode.window.showErrorMessage('Extension context not available for export.');
+                return;
+            }
+            
+            await exportStage(stageDetail.id, cliOptions, defaultSettings, this.context, {}, stageDetail);
 
         } catch (error) {
             console.error('Failed to export stage:', error);
@@ -532,15 +539,19 @@ export class StageDetailPanel {
                 host: apiUrl
             };
 
-            const outputDir = await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: 'Select Metadata Export Directory'
-            }).then(result => result?.[0]?.fsPath);
-
-            if (!outputDir) {
+            // Construct workspace export path for schema
+            const exportFolderName = this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) {
+                vscode.window.showErrorMessage('No workspace folder found. Please open a workspace to export metadata.');
                 return;
+            }
+            
+            const outputDir = path.join(workspaceRoot, exportFolderName, 'schemas');
+            
+            // Ensure schemas directory exists
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
             }
 
             await vscode.window.withProgress({

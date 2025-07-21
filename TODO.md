@@ -3,3 +3,5 @@
 [] exportovane tabulky z bucketu pojmenovat jen jménem tabulky
 [] export dat do pwd - teď se mě to modalem OS ptá kam to přijde
 
+[] logo v extensions listu
+[] bejt v marketplace

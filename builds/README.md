@@ -19,6 +19,7 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.7.0   | 275KB     | 2025-01-21   | MAJOR: Workspace-based exports (no file dialogs, automatic directory structure) |
 | 2.6.5   | 269KB     | 2025-01-21   | FIXED: Column display (undefined names) and blank refresh tab issues |
 | 2.6.4   | 268KB     | 2025-01-21   | UI: Renamed "Export Schema Only" → "Export Table Metadata" buttons |
 | 2.6.3   | 266KB     | 2025-01-21   | MAJOR: Schema export via Storage API (fixed CLI JSON parse errors) |
@@ -65,10 +66,10 @@ builds/
 
 ## 🎯 Latest Build
 
-**Current Version:** `2.6.5`
-**File:** `keboola-storage-api-explorer-2.6.5.vsix`
-**Size:** 269KB
-**Features:** FIXED column display (undefined names) and blank refresh tab issues
+**Current Version:** `2.7.0`
+**File:** `keboola-storage-api-explorer-2.7.0.vsix`
+**Size:** 275KB
+**Features:** MAJOR workspace-based export system with automatic directory structure
 
 ## ⚙️ Build Configuration
 

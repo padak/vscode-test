@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { KeboolaBucketDetail } from './keboolaApi';
 import { exportBucket, exportBucketSchema, KbcCliOptions, ExportSettings } from './kbcCli';
 
@@ -468,6 +470,10 @@ export class BucketDetailPanel {
                     <h2 class="section-title">📤 Current Export Settings</h2>
                     <div class="export-settings">
                         <div class="settings-row">
+                            <span class="setting-label">Export folder:</span>
+                            <span class="setting-value">${this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</span>
+                        </div>
+                        <div class="settings-row">
                             <span class="setting-label">Export limit:</span>
                             <span class="setting-value">${this.exportRowLimit === 0 ? 'unlimited' : this.exportRowLimit.toLocaleString()} rows</span>
                         </div>
@@ -476,7 +482,7 @@ export class BucketDetailPanel {
                             <span class="setting-value">${this.context?.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</span>
                         </div>
                         <div class="settings-note">
-                            <small>💡 Use "Keboola: Settings" to change these defaults. Export operations will prompt to override these values.</small>
+                            <small>💡 Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong>/${bucketDetail.stage}/${bucketDetail.id.split('.').slice(1).join('.')}/</small>
                         </div>
                     </div>
                 </div>
@@ -563,7 +569,12 @@ export class BucketDetailPanel {
                 includeHeaders: this.context?.globalState.get<boolean>('keboola.includeHeaders') ?? true
             };
 
-            await exportBucket(bucketDetail.id, cliOptions, defaultSettings, {}, bucketDetail.tables);
+            if (!this.context) {
+                vscode.window.showErrorMessage('Extension context not available for export.');
+                return;
+            }
+            
+            await exportBucket(bucketDetail.id, cliOptions, defaultSettings, this.context, {}, bucketDetail.tables);
 
         } catch (error) {
             console.error('Failed to export bucket:', error);
@@ -590,15 +601,19 @@ export class BucketDetailPanel {
                 host: apiUrl
             };
 
-            const outputDir = await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: 'Select Metadata Export Directory'
-            }).then(result => result?.[0]?.fsPath);
-
-            if (!outputDir) {
+            // Construct workspace export path for schema
+            const exportFolderName = this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) {
+                vscode.window.showErrorMessage('No workspace folder found. Please open a workspace to export metadata.');
                 return;
+            }
+            
+            const outputDir = path.join(workspaceRoot, exportFolderName, 'schemas');
+            
+            // Ensure schemas directory exists
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
             }
 
             await vscode.window.withProgress({

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getOutputChannel } from './extension';
+import { constructExportPath, constructBucketExportPath, constructStageExportPath, ensureDirectoryExists, extractStage, extractBucketId, getExportFolderName } from './workspaceUtils';
 
 export class KbcCliError extends Error {
     constructor(message: string, public readonly exitCode?: number) {
@@ -245,6 +246,7 @@ export async function exportTable(
     tableId: string, 
     options: KbcCliOptions,
     defaultSettings: ExportSettings,
+    context: vscode.ExtensionContext,
     exportOptions: ExportOptions = {}
 ): Promise<string> {
     const outputChannel = getOutputChannel();
@@ -271,28 +273,28 @@ export async function exportTable(
             progress.report({ message: "Preparing export..." });
             outputChannel.appendLine(`📋 Export settings: Row limit: ${exportSettings.rowLimit === 0 ? 'unlimited' : exportSettings.rowLimit.toLocaleString()}, Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
             
-            // Choose output directory
-            const outputDir = exportOptions.outputDirectory || await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: 'Select Export Directory'
-            }).then(result => result?.[0]?.fsPath);
-
-            if (!outputDir) {
-                throw new Error('No output directory selected');
+            // Construct workspace export path
+            const exportFolderName = getExportFolderName(context);
+            const stage = extractStage(tableId);
+            const bucketId = extractBucketId(tableId);
+            
+            const outputPath = constructExportPath(exportFolderName, stage, bucketId, tableId);
+            if (!outputPath) {
+                throw new Error('No workspace folder found. Please open a workspace to export data.');
             }
+
+            // Ensure the directory exists
+            const outputDir = path.dirname(outputPath);
+            ensureDirectoryExists(outputDir);
+            
+            outputChannel.appendLine(`📁 Export path: ${outputPath}`);
 
             const limitText = exportSettings.rowLimit === 0 ? 'unlimited' : exportSettings.rowLimit.toLocaleString();
             const headersText = exportSettings.includeHeaders ? 'with headers' : 'without headers';
             
             progress.report({ message: `Downloading ${limitText} rows ${headersText}... (see Output panel for details)` });
 
-            // Execute export command
-            const fileName = `${tableId.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
-            const outputPath = path.join(outputDir, fileName);
-            
-            outputChannel.appendLine(`📁 Exporting to: ${outputPath}`);
+            outputChannel.appendLine(`📁 Final export location: ${outputPath}`);
             outputChannel.appendLine(`📊 Row limit: ${limitText}`);
             outputChannel.appendLine(`📋 Headers: ${exportSettings.includeHeaders ? 'included' : 'excluded'}`);
             outputChannel.appendLine(`⏳ Starting download... (this may take a while for large tables)`);
@@ -474,6 +476,8 @@ export async function exportTableSchema(
         const schemaFileName = `${tableId.replace(/[^a-zA-Z0-9.-]/g, '_')}.schema.json`;
         const schemaPath = path.join(outputDir, schemaFileName);
         
+        outputChannel.appendLine(`📋 Debug: tableId="${tableId}", fileName="${schemaFileName}"`);
+        
         fs.writeFileSync(schemaPath, JSON.stringify(schema, null, 2));
         
         outputChannel.appendLine(`✅ Schema exported: ${schemaPath}`);
@@ -495,6 +499,7 @@ export async function exportBucket(
     bucketId: string, 
     options: KbcCliOptions,
     defaultSettings: ExportSettings,
+    context: vscode.ExtensionContext,
     exportOptions: ExportOptions = {},
     bucketTables?: Array<{id: string, displayName?: string, name?: string}>
 ): Promise<string> {
@@ -521,23 +526,19 @@ export async function exportBucket(
         try {
             progress.report({ increment: 5, message: "Getting bucket info..." });
             
-            // Choose output directory
-            const outputDir = exportOptions.outputDirectory || await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: 'Select Export Directory'
-            }).then(result => result?.[0]?.fsPath);
-
-            if (!outputDir) {
-                throw new Error('No output directory selected');
+            // Construct workspace export path for bucket
+            const exportFolderName = getExportFolderName(context);
+            const stage = extractStage(bucketId);
+            
+            const bucketDir = constructBucketExportPath(exportFolderName, stage, bucketId);
+            if (!bucketDir) {
+                throw new Error('No workspace folder found. Please open a workspace to export data.');
             }
 
-            // Create bucket subfolder
-            const bucketDir = path.join(outputDir, bucketId.replace(/[^a-zA-Z0-9.-]/g, '_'));
-            if (!fs.existsSync(bucketDir)) {
-                fs.mkdirSync(bucketDir, { recursive: true });
-            }
+            // Ensure the directory exists
+            ensureDirectoryExists(bucketDir);
+            
+            outputChannel.appendLine(`📁 Bucket export path: ${bucketDir}`);
 
             // Get tables in bucket
             progress.report({ increment: 10, message: "Getting tables list..." });
@@ -735,6 +736,7 @@ export async function exportStage(
     stage: string, 
     options: KbcCliOptions,
     defaultSettings: ExportSettings,
+    context: vscode.ExtensionContext,
     exportOptions: ExportOptions = {},
     stageDetail?: {id: string, buckets: Array<{id: string, displayName?: string, tables: Array<{id: string, displayName?: string, name?: string}>}>}
 ): Promise<string> {
@@ -761,23 +763,18 @@ export async function exportStage(
         try {
             progress.report({ increment: 5, message: "Getting stage info..." });
             
-            // Choose output directory
-            const outputDir = exportOptions.outputDirectory || await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: 'Select Export Directory'
-            }).then(result => result?.[0]?.fsPath);
-
-            if (!outputDir) {
-                throw new Error('No output directory selected');
+            // Construct workspace export path for stage
+            const exportFolderName = getExportFolderName(context);
+            
+            const stageDir = constructStageExportPath(exportFolderName, stage);
+            if (!stageDir) {
+                throw new Error('No workspace folder found. Please open a workspace to export data.');
             }
 
-            // Create stage subfolder
-            const stageDir = path.join(outputDir, `${stage}_stage`);
-            if (!fs.existsSync(stageDir)) {
-                fs.mkdirSync(stageDir, { recursive: true });
-            }
+            // Ensure the directory exists
+            ensureDirectoryExists(stageDir);
+            
+            outputChannel.appendLine(`📁 Stage export path: ${stageDir}`);
 
             // Get buckets in stage
             progress.report({ increment: 10, message: "Getting buckets list..." });
@@ -818,9 +815,7 @@ export async function exportStage(
                 outputChannel.appendLine(`Exporting bucket ${i + 1}/${stageBuckets.length}: ${bucket.id}`);
 
                 // Export bucket to stage directory
-                await exportBucket(bucket.id, options, exportSettings, {
-                    ...exportOptions,
-                    outputDirectory: stageDir,
+                await exportBucket(bucket.id, options, exportSettings, context, {
                     rowLimit: exportSettings.rowLimit,
                     includeHeaders: exportSettings.includeHeaders
                 }, bucket.tables);

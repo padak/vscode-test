@@ -5,6 +5,231 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.1] - 2025-01-21
+
+### 🐛 FIXED: Schema Export Directory Creation
+- **FIXED: "ENOENT: no such file or directory"** error when exporting metadata
+- **ADDED: Directory Creation** for schemas folder before writing schema files
+- **IMPROVED: Error Handling** in table, bucket, and stage schema exports
+
+### 📋 Schema Export Issues Resolved
+#### **Problem:**
+```bash
+ENOENT: no such file or directory, open '/path/kbc_project/schemas/in.c-new.schema.json'
+```
+
+#### **Root Cause:**
+- Schema exports were writing to `workspace/kbc_project/schemas/` directory
+- Directory wasn't being created automatically before file write operations
+- `fs.writeFileSync()` doesn't create parent directories
+
+#### **Solution:**
+```typescript
+// Added to all schema export functions
+const outputDir = path.join(workspaceRoot, exportFolderName, 'schemas');
+
+// Ensure schemas directory exists  
+if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+}
+```
+
+### 🔧 Files Updated
+- **TableDetailPanel.ts**: Added directory creation for table schema exports
+- **BucketDetailPanel.ts**: Added directory creation for bucket schema exports  
+- **StageDetailPanel.ts**: Added directory creation for stage schema exports
+- **Imports**: Added `import * as fs from 'fs'` to all detail panels
+
+### ✅ Schema Export Behavior Now
+#### **Directory Structure Created:**
+```
+workspace/
+└── kbc_project/
+    ├── in/               # Data exports (working in 2.7.0)
+    │   └── c-main/
+    │       └── table.csv
+    └── schemas/          # Metadata exports (fixed in 2.7.1)
+        ├── in_c-main_table.schema.json
+        ├── bucket_in_c-main.schema.json
+        └── stage_in.schema.json
+```
+
+#### **Export Operations:**
+- **Data Export**: ✅ Working (creates stage/bucket directories automatically)
+- **Metadata Export**: ✅ Fixed (creates schemas directory automatically)
+- **Error Handling**: ✅ Clear messages if workspace not found
+
+### 💡 Technical Details
+- **Directory Creation**: Uses `fs.mkdirSync(outputDir, { recursive: true })`
+- **Check Before Create**: `fs.existsSync(outputDir)` prevents unnecessary operations
+- **Consistent Pattern**: Same approach across all three detail panels
+- **Backwards Compatibility**: No changes to existing export folder configuration
+
+**Metadata export now works correctly alongside data export!** 📋✅
+
+---
+
+## [2.7.0] - 2025-01-21
+
+### 🚀 MAJOR: Workspace-Based Export System
+- **NEW: Export Folder Setting** - Configure export destination relative to workspace root
+- **REMOVED: File Picker Dialogs** - No more OS file dialogs, exports go directly to workspace
+- **AUTOMATIC: Directory Structure** - Stage/bucket/table hierarchy created automatically
+- **STREAMLINED: Developer Workflow** - All exports organized under configurable folder
+
+### 📂 Export Folder Configuration
+#### **New Setting in Settings Panel:**
+```
+Export folder name (relative to workspace root): kbc_project
+```
+- **Default Value**: `kbc_project`
+- **Stored Per**: KBC URL + token combination in `context.globalState`
+- **Path Structure**: `<workspace>/<exportFolderName>/<stage>/<bucket>/<table>.csv`
+
+### 🗂️ Directory Structure
+#### **Table Export Path:**
+```
+workspace/
+└── kbc_project/           # Configurable folder name
+    ├── in/               # Input stage
+    │   └── c-main/       # Bucket (without stage prefix)
+    │       ├── customers.csv
+    │       └── orders.csv
+    └── out/              # Output stage
+        └── c-results/
+            └── summary.csv
+```
+
+#### **Schema Export Path:**
+```
+workspace/
+└── kbc_project/
+    └── schemas/          # All metadata exports
+        ├── in_c-main_customers.schema.json
+        ├── bucket_in_c-main.schema.json
+        └── stage_in.schema.json
+```
+
+### 🔧 Technical Implementation
+#### **New Workspace Utilities (`workspaceUtils.ts`):**
+- `getWorkspaceRoot()` - Get first workspace folder path
+- `constructExportPath()` - Build complete file path for table exports
+- `constructBucketExportPath()` - Build directory path for bucket exports  
+- `constructStageExportPath()` - Build directory path for stage exports
+- `ensureDirectoryExists()` - Create directories recursively
+- `extractStage()` / `extractBucketId()` - Parse IDs for path construction
+- `getExportFolderName()` - Get folder name from settings
+
+#### **Updated Export Functions:**
+```typescript
+// Before (with file dialogs)
+const outputDir = await vscode.window.showOpenDialog({...})
+
+// After (workspace-based)
+const outputPath = constructExportPath(exportFolderName, stage, bucketId, tableId);
+ensureDirectoryExists(path.dirname(outputPath));
+```
+
+#### **Function Signature Changes:**
+```typescript
+// All export functions now require context parameter
+exportTable(tableId, options, settings, context, exportOptions)
+exportBucket(bucketId, options, settings, context, exportOptions, bucketTables)
+exportStage(stage, options, settings, context, exportOptions, stageDetail)
+```
+
+### 📊 UI Display Updates
+#### **TableDetailPanel:**
+```
+📏 Current Settings:
+Export Folder: kbc_project | Preview: 100 rows | Export: 2,000 rows | Headers: On
+Files exported to: workspace/kbc_project/in/c-main/
+```
+
+#### **BucketDetailPanel:**
+```
+📤 Current Export Settings
+Export folder: kbc_project
+Export limit: 2,000 rows  
+Headers: On
+Files exported to: workspace/kbc_project/in/c-main/
+```
+
+### 🛠️ Developer Experience
+#### **Workspace Requirements:**
+- **VS Code workspace must be open** - Extension checks for `vscode.workspace.workspaceFolders[0]`
+- **Error Handling**: Clear messages if no workspace found
+- **Automatic Setup**: Directories created recursively on first export
+
+#### **Future-Proof Design:**
+- **Consistent Structure**: `in/` and `out/` stages for future sync features
+- **Configurable Paths**: Easy to change export root folder
+- **Organized Layout**: Supports complex project structures
+
+### 🚨 Breaking Changes
+#### **File Dialog Removal:**
+```diff
+- const outputDir = await vscode.window.showOpenDialog({...})
++ const outputPath = constructExportPath(...)  // Automatic workspace path
+```
+
+#### **Export Function Parameters:**
+```diff
+- await exportTable(tableId, options, settings)
++ await exportTable(tableId, options, settings, context)
+```
+
+### 📁 Export Behavior
+#### **Table Export:**
+- **Path**: `workspace/kbc_project/in/c-main/customers.csv`
+- **Directory**: Created automatically if doesn't exist
+- **Filename**: Sanitized table ID with `.csv` extension
+
+#### **Bucket Export:**
+- **Path**: `workspace/kbc_project/in/c-main/` (all tables in bucket)
+- **Structure**: Each table as separate CSV file
+- **Empty Tables**: Creates placeholder CSV files (handles CLI bug)
+
+#### **Stage Export:**
+- **Path**: `workspace/kbc_project/in/` (all buckets in stage)
+- **Structure**: Bucket subdirectories with table CSV files
+- **Recursive**: Creates complete stage hierarchy
+
+#### **Schema Export:**
+- **Path**: `workspace/kbc_project/schemas/`
+- **Format**: JSON files with comprehensive metadata
+- **Naming**: `{type}_{id}.schema.json` pattern
+
+### 💡 Configuration Management
+#### **Setting Storage:**
+- **Key**: `keboola.exportFolderName` in `context.globalState`
+- **Scope**: Per workspace, persistent across sessions
+- **Validation**: Cannot be empty, trimmed automatically
+- **Default**: Falls back to `kbc_project` if not set
+
+#### **Path Resolution:**
+```typescript
+const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+const exportFolder = context.globalState.get('keboola.exportFolderName') || 'kbc_project';
+const finalPath = path.join(workspaceRoot, exportFolder, stage, bucket, `${table}.csv`);
+```
+
+### 🔄 Migration Notes
+#### **From Previous Versions:**
+- **No Data Loss**: Existing exports in custom locations unaffected
+- **New Behavior**: All future exports use workspace structure
+- **Setting Reset**: Export folder defaults to `kbc_project` (configurable)
+
+#### **Workspace Setup:**
+1. **Open VS Code workspace** (File → Open Folder)
+2. **Configure export folder** via Keboola Settings
+3. **Export data** - directories created automatically
+4. **Files organized** under workspace/export-folder/stage/bucket/
+
+**All exports now organize automatically under your workspace folder!** 📂🚀
+
+---
+
 ## [2.6.5] - 2025-01-21
 
 ### 🐛 FIXED: Table Detail Display Issues

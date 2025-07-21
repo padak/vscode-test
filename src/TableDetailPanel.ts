@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { KeboolaTableDetail, KeboolaApi, KeboolaApiError } from './keboolaApi';
 import { exportTable, exportTableSchema, KbcCliOptions, ExportSettings } from './kbcCli';
 
@@ -156,7 +158,7 @@ export class TableDetailPanel {
                 includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true
             };
 
-            await exportTable(this.tableDetail.id, cliOptions, defaultSettings);
+            await exportTable(this.tableDetail.id, cliOptions, defaultSettings, this.context);
 
         } catch (error) {
             console.error('Failed to export table:', error);
@@ -184,16 +186,19 @@ export class TableDetailPanel {
                 host: apiUrl
             };
 
-            // Choose output directory
-            const outputDir = await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: 'Select Metadata Export Directory'
-            }).then(result => result?.[0]?.fsPath);
-
-            if (!outputDir) {
+            // Construct workspace export path for schema
+            const exportFolderName = this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) {
+                vscode.window.showErrorMessage('No workspace folder found. Please open a workspace to export metadata.');
                 return;
+            }
+            
+            const outputDir = path.join(workspaceRoot, exportFolderName, 'schemas');
+            
+            // Ensure schemas directory exists
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
             }
 
             await vscode.window.withProgress({
@@ -510,10 +515,11 @@ export class TableDetailPanel {
                     
                     <div class="row-limit-display">
                         📏 <strong>Current Settings:</strong><br>
+                        Export Folder: <strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong> | 
                         Preview: <strong>${this.previewRowLimit.toLocaleString()}</strong> rows | 
                         Export: <strong>${this.exportRowLimit === 0 ? 'unlimited' : this.exportRowLimit.toLocaleString()}</strong> rows | 
                         Headers: <strong>${this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</strong>
-                        <br><small>Use "Keboola: Settings" to change these defaults</small>
+                        <br><small>Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong>/${this.tableDetail.bucket.stage}/${this.tableDetail.bucket.id.split('.').slice(1).join('.')}/</small>
                     </div>
                 </div>
 

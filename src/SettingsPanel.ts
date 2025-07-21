@@ -18,6 +18,7 @@ interface SettingsData {
     previewRowLimit: number;
     exportRowLimit: number;
     includeHeaders: boolean;
+    exportFolderName: string;
     lastUsed?: string;
 }
 
@@ -134,7 +135,7 @@ export class SettingsPanel {
                         await this.handleTokenSave(message.token);
                         break;
                     case 'saveExportSettings':
-                        await this.handleExportSettingsSave(message.exportRowLimit, message.includeHeaders);
+                        await this.handleExportSettingsSave(message.exportRowLimit, message.includeHeaders, message.exportFolderName);
                         break;
                     case 'savePreviewSettings':
                         await this.handlePreviewSettingsSave(message.previewRowLimit);
@@ -239,7 +240,7 @@ export class SettingsPanel {
         }
     }
 
-    private async handleExportSettingsSave(exportRowLimit: number, includeHeaders: boolean): Promise<void> {
+    private async handleExportSettingsSave(exportRowLimit: number, includeHeaders: boolean, exportFolderName: string): Promise<void> {
         try {
             // Validate export row limit (0 = unlimited is allowed)
             if (exportRowLimit < 0 || exportRowLimit > 10000000) {
@@ -251,9 +252,20 @@ export class SettingsPanel {
                 return;
             }
 
+            // Validate export folder name
+            if (!exportFolderName || exportFolderName.trim() === '') {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Export folder name cannot be empty'
+                });
+                return;
+            }
+
             // Save export settings
             await this.context.globalState.update('keboola.exportRowLimit', exportRowLimit);
             await this.context.globalState.update('keboola.includeHeaders', includeHeaders);
+            await this.context.globalState.update('keboola.exportFolderName', exportFolderName.trim());
             
             const limitText = exportRowLimit === 0 ? 'unlimited' : exportRowLimit.toLocaleString();
             const headersText = includeHeaders ? 'included' : 'excluded';
@@ -262,7 +274,7 @@ export class SettingsPanel {
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'success',
-                text: `Export settings saved! Limit: ${limitText}, Headers: ${headersText}`
+                text: `Export settings saved! Folder: "${exportFolderName.trim()}", Limit: ${limitText}, Headers: ${headersText}`
             });
 
         } catch (error) {
@@ -343,6 +355,7 @@ export class SettingsPanel {
             previewRowLimit: this.context.globalState.get<number>('keboola.previewRowLimit') || 100,
             exportRowLimit: this.context.globalState.get<number>('keboola.exportRowLimit') || 2000,
             includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true,
+            exportFolderName: this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project',
             lastUsed: this.context.globalState.get<string>('keboola.lastUsedUrl')
         };
     }
@@ -752,6 +765,16 @@ export class SettingsPanel {
                                 <div class="form-help">0 = unlimited, or 1-10,000,000 rows</div>
                             </div>
                             
+                            <div class="form-group">
+                                <label class="form-label" for="exportFolderNameInput">Export folder name (relative to workspace root):</label>
+                                <input type="text" 
+                                       id="exportFolderNameInput" 
+                                       class="form-input" 
+                                       placeholder="kbc_project"
+                                       value="${settings.exportFolderName}">
+                                <div class="form-help">Folder where all exports will be saved (e.g., "kbc_project" → workspace/kbc_project/)</div>
+                            </div>
+                            
                             <div class="checkbox-group">
                                 <input type="checkbox" 
                                        id="includeHeadersInput" 
@@ -812,16 +835,23 @@ export class SettingsPanel {
                 function saveExportSettings() {
                     const exportRowLimit = parseInt(document.getElementById('exportRowLimitInput').value);
                     const includeHeaders = document.getElementById('includeHeadersInput').checked;
+                    const exportFolderName = document.getElementById('exportFolderNameInput').value.trim();
                     
                     if (isNaN(exportRowLimit) || exportRowLimit < 0) {
                         showMessage('error', 'Please enter a valid export row limit (0 = unlimited, or 1-10,000,000)');
                         return;
                     }
                     
+                    if (!exportFolderName) {
+                        showMessage('error', 'Export folder name cannot be empty');
+                        return;
+                    }
+                    
                     vscode.postMessage({
                         command: 'saveExportSettings',
                         exportRowLimit: exportRowLimit,
-                        includeHeaders: includeHeaders
+                        includeHeaders: includeHeaders,
+                        exportFolderName: exportFolderName
                     });
                 }
                 
