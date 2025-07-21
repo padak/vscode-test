@@ -1,71 +1,142 @@
 {
-  "name": "padak-super-extension",
-  "displayName": "Padák Super Extension",
-  "description": "A simple test extension that shows a button with 'Padák je super' message",
-  "version": "0.0.8",
-  "publisher": "keboola",
-  "license": "MIT",
-  "keywords": ["keboola", "padak", "test", "webview"],
-  "icon": "media/logo.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/padak/vscode-test.git"
-  },
-  "engines": {
-    "vscode": "^1.74.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-            {
-        "command": "padak.sayHello",
-        "title": "Say Hello Padák",
-        "category": "Padák",
-        "icon": "./media/logo.png"
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "padak-explorer",
-          "title": "Padák Super",
-          "icon": "./media/logo.png"
-        }
-      ]
-    },
-    "views": {
-      "padak-explorer": [
-        {
-          "id": "padak-view",
-          "name": "Padák Controls",
-          "when": "true"
-        }
-      ]
-    },
-    "menus": {
-      "view/title": [
-        {
-          "command": "padak.sayHello",
-          "when": "view == padak-view",
-          "group": "navigation"
-        }
-      ]
-    }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.74.0",
-    "@types/node": "16.x",
-    "typescript": "^4.9.4"
-  }
-} 
+	"name": "keboola-storage-api-explorer",
+	"displayName": "Keboola Storage API Explorer",
+	"description": "Browse and explore Keboola Storage tables via direct API calls",
+	"version": "2.1.4",
+	"publisher": "keboola",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onView:keboolaExplorer"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "keboola-storage",
+					"title": "Keboola Storage",
+					"icon": "./media/logo.png"
+				}
+			]
+		},
+		"views": {
+			"keboola-storage": [
+				{
+					"id": "keboolaExplorer",
+					"name": "Storage Explorer",
+					"when": "true"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "keboola.configure",
+				"title": "Configure Connection",
+				"icon": "$(gear)"
+			},
+			{
+				"command": "keboola.refresh",
+				"title": "Refresh",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "keboola.setRowLimit",
+				"title": "Set Row Limit",
+				"icon": "$(settings-gear)"
+			},
+			{
+				"command": "keboola.showTable",
+				"title": "Show Table Details",
+				"icon": "$(table)"
+			},
+			{
+				"command": "keboola.showBucket",
+				"title": "Show Bucket Details",
+				"icon": "$(folder-opened)"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "keboola.configure",
+					"when": "view == keboolaExplorer",
+					"group": "navigation@1"
+				},
+				{
+					"command": "keboola.setRowLimit",
+					"when": "view == keboolaExplorer",
+					"group": "navigation@2"
+				},
+				{
+					"command": "keboola.refresh",
+					"when": "view == keboolaExplorer",
+					"group": "navigation@3"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "keboola.showTable",
+					"when": "view == keboolaExplorer && viewItem == table",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.showBucket",
+					"when": "view == keboolaExplorer && viewItem == bucket",
+					"group": "inline"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "keboola.configure",
+					"title": "Keboola: Configure Connection"
+				},
+				{
+					"command": "keboola.setRowLimit",
+					"title": "Keboola: Set Row Limit"
+				},
+				{
+					"command": "keboola.refresh",
+					"title": "Keboola: Refresh Storage"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Keboola",
+			"properties": {
+				"keboola.apiUrl": {
+					"type": "string",
+					"default": "",
+					"description": "Keboola API URL"
+				},
+				"keboola.token": {
+					"type": "string",
+					"default": "",
+					"description": "Keboola Storage API Token"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "16.x",
+		"@types/node-fetch": "^2.6.2",
+		"@types/vscode": "^1.74.0",
+		"typescript": "^4.9.4"
+	},
+	"dependencies": {
+		"node-fetch": "^2.7.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/padak/vscode-test.git"
+	}
+}
