@@ -5,6 +5,140 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.5] - 2025-01-21
+
+### 🐛 FIXED: Table Detail Display Issues
+- **FIXED: Column names showing as "undefined"** in table detail view
+- **FIXED: "Refresh Data" button making tab blank** 
+- **CORRECTED: Column data structure** from API response processing
+
+### 🔧 Technical Fixes
+#### **Column Display Issue:**
+```bash
+❌ Problem: Column names displayed as "undefined"
+💡 Root Cause: API returns columns as string array, interface expected objects
+✅ Solution: Convert string array to proper column objects with metadata
+```
+
+#### **API Response Processing:**
+```javascript
+// Before (Broken)
+columns: response.columns || []
+// API returns: ["Domain_Name", "Domain_privacy_protection_status", ...]
+// Interface expects: [{name: "...", definition: {...}, description: "..."}, ...]
+
+// After (Fixed) 
+columns: (response.columns || []).map((columnName: string) => ({
+    name: columnName,
+    definition: {
+        type: 'STRING', // Default type since API doesn't provide schema info
+        nullable: true,
+        length: undefined
+    },
+    description: undefined
+}))
+```
+
+#### **Refresh Data Issue:**
+```bash
+❌ Problem: "Refresh Data" button caused blank tab
+💡 Root Cause: WebView tried to call location.reload() which doesn't work
+✅ Solution: Regenerate HTML content with fresh data instead
+```
+
+#### **Refresh Implementation:**
+```typescript
+// Before (Broken)
+this.panel.webview.postMessage({
+    command: 'updateTableInfo',
+    tableDetail: updatedDetail
+});
+// JavaScript: location.reload(); // ❌ Doesn't work in VS Code WebView
+
+// After (Fixed)
+this.tableDetail = updatedDetail;
+this.updateContent(); // ✅ Regenerates HTML with new data
+```
+
+### 📋 Column Display Now Shows:
+- **Column Name**: Proper column names (e.g., "Domain_Name", "Domain_status_at_NC")
+- **Type**: "STRING" (default, since API doesn't provide detailed schema)
+- **Nullable**: "Yes" (default)
+- **Description**: "-" (empty, since basic API doesn't include descriptions)
+
+### 🔄 Refresh Data Now Works:
+- **Button Action**: Fetches latest table metadata from API
+- **UI Update**: Regenerates entire panel with fresh data
+- **User Feedback**: "Table data refreshed successfully" notification
+- **Error Handling**: Proper error messages if refresh fails
+
+### 💡 Data Structure Notes
+- **API Limitation**: Basic table detail endpoint returns simple column names only
+- **Future Enhancement**: Rich metadata export uses different API endpoints with columnMetadata
+- **Display Strategy**: Show available data gracefully with sensible defaults
+- **Column Schema**: For detailed column types/descriptions, use "Export Table Metadata" feature
+
+**Table detail view now displays column names correctly and refresh functionality works!** 🔧✅
+
+---
+
+## [2.6.4] - 2025-01-21
+
+### 🏷️ UI: Renamed Export Button Text
+- **RENAMED: "Export Schema Only" → "Export Table Metadata"** across all panels
+- **CONSISTENT TERMINOLOGY**: All export functions now use "metadata" instead of "schema"
+- **USER-FACING MESSAGES**: Updated all dialog titles, success messages, and error messages
+
+### 📋 Button Text Updates
+#### **Table Detail Panel:**
+```
+❌ Before: "📋 Export Schema Only"
+✅ After:  "📋 Export Table Metadata"
+```
+
+#### **Bucket Detail Panel:**
+```
+❌ Before: "📋 Export Schema Only"  
+✅ After:  "📋 Export Table Metadata"
+```
+
+#### **Stage Detail Panel:**
+```
+❌ Before: "📋 Export Schema Only"
+✅ After:  "📋 Export Table Metadata"
+```
+
+### 💬 User Message Updates
+#### **Dialog Titles:**
+- `"Exporting table schema..."` → `"Exporting table metadata..."`
+- `"Select Schema Export Directory"` → `"Select Metadata Export Directory"`
+
+#### **Success Messages:**
+- `"Table schema exported successfully"` → `"Table metadata exported successfully"`
+- `"Bucket schema exported successfully"` → `"Bucket metadata exported successfully"`
+- `"Stage schema exported successfully"` → `"Stage metadata exported successfully"`
+
+#### **Error Messages:**
+- `"Schema export failed"` → `"Metadata export failed"`
+- `"Bucket schema export failed"` → `"Bucket metadata export failed"`
+- `"Stage schema export failed"` → `"Stage metadata export failed"`
+
+### 🔧 Technical Details
+- **Files Updated**: TableDetailPanel.ts, BucketDetailPanel.ts, StageDetailPanel.ts, keboolaApi.ts
+- **Function Names**: Internal function names remain unchanged (exportSchema, exportTableSchema, etc.)
+- **File Extensions**: Output files still use `.schema.json` extension (unchanged)
+- **Functionality**: No functional changes - only UI text updates
+
+### 💡 Terminology Clarification
+- **"Schema"**: Technical database structure (columns, types, constraints)
+- **"Metadata"**: Broader term including schema + additional info (timestamps, descriptions, bucket details)
+- **Export Content**: Files contain comprehensive metadata (not just basic schema)
+- **User Understanding**: "Metadata" better describes the rich export content
+
+**Button text now accurately reflects the comprehensive metadata export functionality!** 🏷️✅
+
+---
+
 ## [2.6.3] - 2025-01-21
 
 ### 🔄 MAJOR UPGRADE: Schema Export Using Keboola Storage API

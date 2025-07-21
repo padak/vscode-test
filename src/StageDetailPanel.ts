@@ -413,7 +413,7 @@ export class StageDetailPanel {
                             📤 Export Stage
                         </button>
                         <button class="action-button secondary" onclick="exportStageSchema()">
-                            📋 Export Schema Only
+                            📋 Export Table Metadata
                         </button>
                         <button class="action-button secondary" onclick="refreshData()">
                             🔄 Refresh Data
@@ -536,7 +536,7 @@ export class StageDetailPanel {
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,
-                openLabel: 'Select Schema Export Directory'
+                openLabel: 'Select Metadata Export Directory'
             }).then(result => result?.[0]?.fsPath);
 
             if (!outputDir) {
@@ -555,7 +555,7 @@ export class StageDetailPanel {
                 progress.report({ increment: 50, message: "Complete!" });
 
                 vscode.window.showInformationMessage(
-                    `Stage schema exported successfully to ${schemaPath}`,
+                    `Stage metadata exported successfully to ${schemaPath}`,
                     'Open File'
                 ).then(choice => {
                     if (choice === 'Open File') {
@@ -567,9 +567,9 @@ export class StageDetailPanel {
         } catch (error) {
             console.error('Failed to export stage schema:', error);
             if (error instanceof Error) {
-                vscode.window.showErrorMessage(`Stage schema export failed: ${error.message}`);
+                vscode.window.showErrorMessage(`Stage metadata export failed: ${error.message}`);
             } else {
-                vscode.window.showErrorMessage(`Stage schema export failed: Unknown error`);
+                vscode.window.showErrorMessage(`Stage metadata export failed: Unknown error`);
             }
         }
     }

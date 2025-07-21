@@ -19,6 +19,8 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 2.6.5   | 269KB     | 2025-01-21   | FIXED: Column display (undefined names) and blank refresh tab issues |
+| 2.6.4   | 268KB     | 2025-01-21   | UI: Renamed "Export Schema Only" → "Export Table Metadata" buttons |
 | 2.6.3   | 266KB     | 2025-01-21   | MAJOR: Schema export via Storage API (fixed CLI JSON parse errors) |
 | 2.6.2   | 264KB     | 2025-01-21   | FIXED: Schema export functionality (removed invalid --format flags) |
 | 2.6.1   | 265KB     | 2025-01-21   | Extended message display duration (+2s for better readability) |
@@ -63,10 +65,10 @@ builds/
 
 ## 🎯 Latest Build
 
-**Current Version:** `2.6.3`
-**File:** `keboola-storage-api-explorer-2.6.3.vsix`
-**Size:** 266KB
-**Features:** MAJOR Schema export upgrade - switched from CLI to Storage API for comprehensive data
+**Current Version:** `2.6.5`
+**File:** `keboola-storage-api-explorer-2.6.5.vsix`
+**Size:** 269KB
+**Features:** FIXED column display (undefined names) and blank refresh tab issues
 
 ## ⚙️ Build Configuration
 

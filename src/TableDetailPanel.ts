@@ -6,7 +6,7 @@ export class TableDetailPanel {
     public static currentPanel: TableDetailPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
     private disposables: vscode.Disposable[] = [];
-    private readonly tableDetail: KeboolaTableDetail;
+    private tableDetail: KeboolaTableDetail;
     private readonly keboolaApi?: KeboolaApi;
     private readonly previewRowLimit: number;
     private readonly exportRowLimit: number;
@@ -189,7 +189,7 @@ export class TableDetailPanel {
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,
-                openLabel: 'Select Schema Export Directory'
+                openLabel: 'Select Metadata Export Directory'
             }).then(result => result?.[0]?.fsPath);
 
             if (!outputDir) {
@@ -198,7 +198,7 @@ export class TableDetailPanel {
 
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Exporting table schema...",
+                title: "Exporting table metadata...",
                 cancellable: false
             }, async (progress) => {
                 progress.report({ increment: 50, message: "Fetching table metadata..." });
@@ -208,16 +208,16 @@ export class TableDetailPanel {
                 progress.report({ increment: 50, message: "Complete!" });
 
                 vscode.window.showInformationMessage(
-                    `Table schema exported successfully to ${schemaPath}`
+                    `Table metadata exported successfully to ${schemaPath}`
                 );
             });
 
         } catch (error) {
-            console.error('Failed to export table schema:', error);
+            console.error('Failed to export table metadata:', error);
             if (error instanceof Error) {
-                vscode.window.showErrorMessage(`Schema export failed: ${error.message}`);
+                vscode.window.showErrorMessage(`Metadata export failed: ${error.message}`);
             } else {
-                vscode.window.showErrorMessage(`Schema export failed: Unknown error`);
+                vscode.window.showErrorMessage(`Metadata export failed: Unknown error`);
             }
         }
     }
@@ -239,11 +239,11 @@ export class TableDetailPanel {
                 // Refresh the table detail
                 const updatedDetail = await this.keboolaApi!.getTableDetail(this.tableDetail.id);
                 
-                // Update the panel content
-                this.panel.webview.postMessage({
-                    command: 'updateTableInfo',
-                    tableDetail: updatedDetail
-                });
+                // Update the internal table detail
+                this.tableDetail = updatedDetail;
+                
+                // Regenerate the entire HTML content with updated data
+                this.updateContent();
                 
                 vscode.window.showInformationMessage('Table data refreshed successfully');
             });
@@ -527,7 +527,7 @@ export class TableDetailPanel {
                             📤 Export Table
                         </button>
                         <button class="action-button secondary" onclick="exportSchema()">
-                            📋 Export Schema Only
+                            📋 Export Table Metadata
                         </button>
                         <button class="action-button secondary" onclick="refreshData()">
                             🔄 Refresh Data
@@ -625,12 +625,7 @@ export class TableDetailPanel {
                 // Listen for messages from the extension
                 window.addEventListener('message', event => {
                     const message = event.data;
-                    switch (message.command) {
-                        case 'updateTableInfo':
-                            // Reload the page with updated data
-                            location.reload();
-                            break;
-                    }
+                    // Message handling for future features
                 });
             </script>
         </body>

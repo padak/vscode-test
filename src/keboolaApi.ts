@@ -214,7 +214,7 @@ export class KeboolaApi {
     }
 
     /**
-     * Get raw table detail data from API (for comprehensive schema export)
+     * Get raw table detail data from API (for comprehensive metadata export)
      */
     async getRawTableDetail(tableId: string): Promise<any> {
         try {
@@ -244,7 +244,15 @@ export class KeboolaApi {
                     stage: response.bucket?.stage || this.extractStageFromTableId(tableId),
                     description: response.bucket?.description
                 },
-                columns: response.columns || [],
+                columns: (response.columns || []).map((columnName: string) => ({
+                    name: columnName,
+                    definition: {
+                        type: 'STRING', // Default type since API doesn't provide schema info
+                        nullable: true,
+                        length: undefined
+                    },
+                    description: undefined
+                })),
                 rowsCount: response.rowsCount || 0,
                 dataSizeBytes: response.dataSizeBytes || 0,
                 created: response.created || '',

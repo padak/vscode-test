@@ -419,7 +419,7 @@ export class BucketDetailPanel {
                             📤 Export Bucket
                         </button>
                         <button class="action-button secondary" onclick="exportBucketSchema()">
-                            📋 Export Schema Only
+                            📋 Export Table Metadata
                         </button>
                         <button class="action-button secondary" onclick="refreshData()">
                             🔄 Refresh Data
@@ -594,7 +594,7 @@ export class BucketDetailPanel {
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,
-                openLabel: 'Select Schema Export Directory'
+                openLabel: 'Select Metadata Export Directory'
             }).then(result => result?.[0]?.fsPath);
 
             if (!outputDir) {
@@ -613,7 +613,7 @@ export class BucketDetailPanel {
                 progress.report({ increment: 50, message: "Complete!" });
 
                 vscode.window.showInformationMessage(
-                    `Bucket schema exported successfully to ${schemaPath}`,
+                    `Bucket metadata exported successfully to ${schemaPath}`,
                     'Open File'
                 ).then(choice => {
                     if (choice === 'Open File') {
@@ -625,9 +625,9 @@ export class BucketDetailPanel {
         } catch (error) {
             console.error('Failed to export bucket schema:', error);
             if (error instanceof Error) {
-                vscode.window.showErrorMessage(`Bucket schema export failed: ${error.message}`);
+                vscode.window.showErrorMessage(`Bucket metadata export failed: ${error.message}`);
             } else {
-                vscode.window.showErrorMessage(`Bucket schema export failed: Unknown error`);
+                vscode.window.showErrorMessage(`Bucket metadata export failed: Unknown error`);
             }
         }
     }
