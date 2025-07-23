@@ -1,6 +1,6 @@
 # 📦 Extension Builds
 
-This folder contains all packaged VSIX files for the Keboola AI Data Platform extension.
+This folder contains all packaged VSIX files for the Keboola Data Engineering Booster extension.
 
 ## 🚀 Building
 
@@ -19,6 +19,8 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 3.1.4   | 372KB     | 2025-07-21   | 🐛 CRITICAL FIX: Extension icon display - added root-level icon field for proper VS Code Extensions view branding |
+| 3.1.3   | 372KB     | 2025-07-21   | 🎨 MAJOR REBRANDING: "Storage API Explorer" → "Data Engineering Booster" with blue Keboola head icon |
 | 3.1.2   | 360KB     | 2025-07-21   | 🐛 CRITICAL FIX: Unified configuration storage system - resolved Jobs API 401 errors by eliminating dual settings |
 | 3.1.1   | 358KB     | 2025-07-21   | 🔍 DEBUG: Enhanced logging for Jobs API troubleshooting with comprehensive request/response analysis |
 | 3.1.0   | 352KB     | 2025-07-21   | 🚀 MAJOR: Complete Jobs Monitoring System with real-time tracking, smart filtering, and Queue API integration |
@@ -50,6 +52,10 @@ This command will:
 To install any build:
 
 ```bash
+# For latest version (3.1.4+)
+code --install-extension builds/keboola-data-engineering-booster-3.1.4.vsix
+
+# For legacy versions (2.x - 3.1.2)
 code --install-extension builds/keboola-storage-api-explorer-VERSION.vsix
 ```
 
@@ -67,17 +73,17 @@ builds/
 ├── keboola-storage-api-explorer-2.0.0.vsix
 ├── keboola-storage-api-explorer-2.0.1.vsix
 ├── ...
-├── keboola-storage-api-explorer-2.8.1.vsix
-└── keboola-storage-api-explorer-3.0.0.vsix (latest)
+├── keboola-storage-api-explorer-3.1.2.vsix
+├── keboola-data-engineering-booster-3.1.3.vsix
+└── keboola-data-engineering-booster-3.1.4.vsix (latest)
 ```
 
 ## 🎯 Latest Build
 
-**Current Version:** `3.0.0`
-**File:** `keboola-storage-api-explorer-3.0.0.vsix`
-**Size:** 317KB
-**Features:** 🎉 MAJOR: Complete Configurations management with branches, components, JSON viewer, and metadata panels
-**Development:** Intensive single-day development session (2025-07-21) with 20+ incremental releases leading to v3.0.0
+**Current Version:** `3.1.4`
+**File:** `keboola-data-engineering-booster-3.1.4.vsix`
+**Size:** 372KB
+**Features:** 🐛 CRITICAL FIX: Extension icon display - blue Keboola head now properly shows in VS Code Extensions view and marketplace
 
 ## ⚙️ Build Configuration
 
@@ -93,24 +99,43 @@ The build process is configured in `package.json`:
 
 This ensures all future builds are automatically placed in this folder.
 
-## 🌟 Version 3.0.0 Highlights
+## 🎨 Version 3.1.x Highlights - The Data Engineering Booster Era
 
-The latest build introduces groundbreaking new functionality:
+### **🎯 Major Rebranding (v3.1.3)**
+- **Extension Name**: `keboola-storage-api-explorer` → `keboola-data-engineering-booster`
+- **Display Name**: "Keboola Storage API Explorer" → "Keboola Data Engineering Booster"
+- **Professional Identity**: Name now reflects comprehensive data engineering capabilities
+- **Visual Branding**: Blue Keboola head icon for consistent brand experience
 
-### 🆕 **New Configurations Section**
-- **Branch Explorer**: Browse all development branches in your project
-- **Component Categories**: Organized view of Extractors, Writers, Transformations, Sandboxes, Data Apps, and Flows
-- **JSON Configuration Viewer**: Open configurations in VS Code's read-only JSON editor
-- **Rich Metadata Panels**: Beautiful HTML panels showing branch and configuration details
+### **🔧 Jobs Monitoring System (v3.1.0)**
+- **Real-Time Tracking**: Monitor running, failed, and completed jobs
+- **Smart Filtering**: View jobs by status, component, or time period  
+- **Queue API Integration**: Direct connection to Keboola's job queue
+- **Rich Details**: Comprehensive job information with logs and metadata
 
-### 🔧 **Enhanced Architecture**
-- **Unified Interface**: Storage and Configurations in the same Activity Bar view
-- **Shared API Client**: Single connection for all Keboola services
-- **Lazy Loading**: Performance-optimized loading of components and configurations
-- **Dedicated Refresh**: Separate refresh commands for Storage and Configurations
+### **⚙️ Technical Excellence (v3.1.1-3.1.2)**
+- **Debug Logging**: Enhanced troubleshooting capabilities
+- **Unified Authentication**: Single configuration system across all sections
+- **API Consistency**: All sections (Storage, Configurations, Jobs) use unified settings
 
-### 💪 **Developer Experience**
-- **Complete Documentation**: Comprehensive feature guide and use cases
-- **Consistent UI**: Same look and feel across Storage and Configurations
-- **Error Handling**: Graceful error handling without breaking existing functionality
-- **Read-Only Security**: Configuration data is read-only for security 
+### **🎨 Complete Platform (v3.0.0 Foundation)**
+- **Storage Explorer**: Browse buckets, tables, and data with rich metadata
+- **Configurations Management**: Navigate branches, components, and configurations
+- **Unified Interface**: Single Activity Bar view for all Keboola functionality
+
+## 🚀 Evolution Timeline
+
+The extension has evolved from a simple storage browser to a comprehensive data engineering platform:
+
+1. **v2.x Era**: Storage-focused with export capabilities
+2. **v3.0.0**: Added Configurations management
+3. **v3.1.0**: Introduced Jobs monitoring
+4. **v3.1.3**: Professional rebranding as "Data Engineering Booster"
+5. **v3.1.4**: Complete visual branding with proper icon display
+
+## 🎯 Why "Data Engineering Booster"?
+
+- **🔧 Beyond Storage**: Manages Storage + Configurations + Jobs monitoring
+- **⚡ Productivity Focus**: "Booster" emphasizes workflow acceleration and efficiency
+- **🚀 Professional Tool**: Reflects enterprise-level data engineering capabilities
+- **🎨 Consistent Branding**: Aligns with Keboola's modern visual identity 
