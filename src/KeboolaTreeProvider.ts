@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { KeboolaTable, KeboolaApi, KeboolaApiError, KeboolaBranch, KeboolaComponent, KeboolaConfiguration } from './keboolaApi';
 import { ConfigurationsTreeProvider, ConfigurationTreeItem } from './ConfigurationsTreeProvider';
+import { JobsTreeProvider, JobTreeItem } from './jobs/JobsTreeProvider';
+import { JobsApi } from './jobs/jobsApi';
+// import { getStoredConfig } from './settings'; // REMOVED: Using inconsistent storage
 
 export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | null | void> = new vscode.EventEmitter<TreeItem | undefined | null | void>();
@@ -9,15 +12,52 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     private tables: KeboolaTable[] = [];
     private isApiConnected: boolean = false;
     private keboolaApi?: KeboolaApi;
+    private jobsApi?: JobsApi;
     private configurationsProvider: ConfigurationsTreeProvider;
+    private jobsProvider: JobsTreeProvider;
 
     constructor() {
         this.configurationsProvider = new ConfigurationsTreeProvider();
+        this.jobsProvider = new JobsTreeProvider();
     }
 
-    setKeboolaApi(api: KeboolaApi | undefined): void {
+    setKeboolaApi(api: KeboolaApi | undefined, config?: {apiUrl: string, token: string}): void {
         this.keboolaApi = api;
         this.configurationsProvider.setKeboolaApi(api);
+        
+        // Initialize Jobs API if storage API is available
+        if (api && config) {
+            console.log(`[KeboolaTreeProvider] Initializing JobsApi with config:`, {
+                apiUrl: config.apiUrl,
+                tokenLength: config.token ? config.token.length : 0,
+                tokenPrefix: config.token ? config.token.substring(0, 8) + '...' : 'NONE'
+            });
+            
+            if (config.apiUrl && config.token) {
+                // Extract host from API URL (remove protocol and path)
+                const hostMatch = config.apiUrl.match(/https?:\/\/([^\/]+)/);
+                console.log(`[KeboolaTreeProvider] Host extraction:`, {
+                    originalUrl: config.apiUrl,
+                    hostMatch: hostMatch,
+                    extractedHost: hostMatch ? hostMatch[1] : 'NO_MATCH'
+                });
+                
+                if (hostMatch) {
+                    this.jobsApi = new JobsApi(hostMatch[1], config.token);
+                    this.jobsProvider.setJobsApi(this.jobsApi);
+                    console.log(`[KeboolaTreeProvider] JobsApi initialized successfully`);
+                } else {
+                    console.log(`[KeboolaTreeProvider] Failed to extract host from API URL`);
+                }
+            } else {
+                console.log(`[KeboolaTreeProvider] Missing API URL or token, JobsApi not initialized`);
+            }
+        } else {
+            console.log(`[KeboolaTreeProvider] No Storage API or config available, JobsApi not initialized`);
+            this.jobsApi = undefined;
+            this.jobsProvider.setJobsApi(undefined);
+        }
+        
         this.refresh();
     }
 
@@ -29,6 +69,11 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 
     refreshConfigurations(): void {
         this.configurationsProvider.refresh();
+        this._onDidChangeTreeData.fire();
+    }
+
+    refreshJobs(): void {
+        this.jobsProvider.refresh();
         this._onDidChangeTreeData.fire();
     }
 
@@ -107,6 +152,17 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 configurationsItem.tooltip = 'Project configurations organized by branches and components';
                 configurationsItem.iconPath = new vscode.ThemeIcon('gear');
                 items.push(configurationsItem);
+
+                // Add Jobs root node
+                const jobsItem = new TreeItem(
+                    'Jobs',
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    'jobs'
+                );
+                jobsItem.description = 'Monitor job execution';
+                jobsItem.tooltip = 'Job monitoring with real-time status and execution history';
+                jobsItem.iconPath = new vscode.ThemeIcon('pulse');
+                items.push(jobsItem);
             }
             
             return Promise.resolve(items);
@@ -153,6 +209,28 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 return treeItem;
             }));
             
+        } else if (element.contextValue === 'jobs') {
+            // Show jobs tree
+            const jobChildren = await this.jobsProvider.getChildren();
+            
+            // Convert JobTreeItem to TreeItem
+            return Promise.resolve(jobChildren.map(jobItem => {
+                const treeItem = new TreeItem(
+                    jobItem.label,
+                    jobItem.collapsibleState,
+                    jobItem.contextValue
+                );
+                treeItem.description = jobItem.description;
+                treeItem.tooltip = jobItem.tooltip;
+                treeItem.iconPath = jobItem.iconPath;
+                
+                // Copy job-specific properties
+                treeItem.job = jobItem.job;
+                treeItem.groupType = jobItem.groupType;
+                
+                return treeItem;
+            }));
+            
         } else if (['branch', 'category', 'component'].includes(element.contextValue || '')) {
             // Delegate configuration tree logic to ConfigurationsTreeProvider
             const configurationTreeItem = this.convertToConfigurationTreeItem(element);
@@ -174,6 +252,29 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 treeItem.category = configItem.category;
                 treeItem.component = configItem.component;
                 treeItem.configuration = configItem.configuration;
+                
+                return treeItem;
+            }));
+            
+        } else if (['job-group', 'load-more'].includes(element.contextValue || '')) {
+            // Delegate jobs tree logic to JobsTreeProvider
+            const jobTreeItem = this.convertToJobTreeItem(element);
+            const jobChildren = await this.jobsProvider.getChildren(jobTreeItem);
+            
+            // Convert back to TreeItem
+            return Promise.resolve(jobChildren.map(jobItem => {
+                const treeItem = new TreeItem(
+                    jobItem.label,
+                    jobItem.collapsibleState,
+                    jobItem.contextValue
+                );
+                treeItem.description = jobItem.description;
+                treeItem.tooltip = jobItem.tooltip;
+                treeItem.iconPath = jobItem.iconPath;
+                
+                // Copy job-specific properties
+                treeItem.job = jobItem.job;
+                treeItem.groupType = jobItem.groupType;
                 
                 return treeItem;
             }));
@@ -270,9 +371,28 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         return configItem;
     }
 
+    private convertToJobTreeItem(element: TreeItem): JobTreeItem {
+        const jobItem = new JobTreeItem(
+            element.label,
+            element.collapsibleState,
+            element.contextValue || '',
+            element.groupType
+        );
+        jobItem.description = element.description;
+        jobItem.tooltip = element.tooltip;
+        jobItem.iconPath = element.iconPath;
+        jobItem.job = element.job;
+        return jobItem;
+    }
+
     // Public method to get branch by ID (used by commands)
     getBranchById(branchId: string): KeboolaBranch | undefined {
         return this.configurationsProvider.getBranchById(branchId);
+    }
+
+    // Public method to get jobs for configuration (used by configuration detail panel)
+    async getJobsForConfiguration(componentId: string, configurationId: string, branchId?: string): Promise<any[]> {
+        return await this.jobsProvider.getJobsForConfiguration(componentId, configurationId, branchId);
     }
 
     // Public method to get table by ID (used by commands)
@@ -299,4 +419,8 @@ export class TreeItem extends vscode.TreeItem {
     category?: string;
     component?: KeboolaComponent;
     configuration?: KeboolaConfiguration;
+    
+    // Jobs-related properties
+    job?: any; // KeboolaJob type from jobs module
+    groupType?: string;
 } 

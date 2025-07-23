@@ -2,7 +2,7 @@
 	"name": "keboola-storage-api-explorer",
 	"displayName": "Keboola Storage API Explorer",
 	"description": "Browse and explore Keboola Storage tables via direct API calls",
-	"version": "3.0.0",
+	"version": "3.1.2",
 	"publisher": "keboola",
 	"engines": {
 		"vscode": "^1.74.0"
@@ -83,6 +83,21 @@
 				"command": "keboola.showConfiguration",
 				"title": "Show Configuration",
 				"icon": "$(file-code)"
+			},
+			{
+				"command": "keboola.refreshJobs",
+				"title": "Refresh Jobs",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "keboola.showJob",
+				"title": "Show Job Details",
+				"icon": "$(pulse)"
+			},
+			{
+				"command": "keboola.showJobsForConfiguration",
+				"title": "Show Jobs for This Configuration",
+				"icon": "$(history)"
 			}
 		],
 		"menus": {
@@ -128,6 +143,21 @@
 					"command": "keboola.refreshConfigurations",
 					"when": "view == keboolaExplorer && viewItem == configurations",
 					"group": "inline"
+				},
+				{
+					"command": "keboola.refreshJobs",
+					"when": "view == keboolaExplorer && viewItem == jobs",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.showJob",
+					"when": "view == keboolaExplorer && viewItem == job",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.showJobsForConfiguration",
+					"when": "view == keboolaExplorer && viewItem == configuration",
+					"group": "inline"
 				}
 			],
 			"commandPalette": [
@@ -162,6 +192,18 @@
 				{
 					"command": "keboola.showConfiguration",
 					"title": "Keboola: Show Configuration"
+				},
+				{
+					"command": "keboola.refreshJobs",
+					"title": "Keboola: Refresh Jobs"
+				},
+				{
+					"command": "keboola.showJob",
+					"title": "Keboola: Show Job Details"
+				},
+				{
+					"command": "keboola.showJobsForConfiguration",
+					"title": "Keboola: Show Jobs for Configuration"
 				}
 			]
 		},

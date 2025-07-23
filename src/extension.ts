@@ -6,6 +6,8 @@ import { BucketDetailPanel } from './BucketDetailPanel';
 import { StageDetailPanel } from './StageDetailPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { ConfigurationsPanel } from './ConfigurationsPanel';
+import { JobDetailPanel } from './jobs/JobDetailPanel';
+import { JobsApi } from './jobs/jobsApi';
 
 let keboolaApi: KeboolaApi | undefined;
 let treeProvider: KeboolaTreeProvider;
@@ -58,7 +60,11 @@ function initializeFromSettings(context: vscode.ExtensionContext) {
             apiUrl: settings.apiUrl, 
             token: settings.token 
         });
-        treeProvider.setKeboolaApi(keboolaApi);
+        // Pass the same settings to tree provider so Jobs API uses consistent config
+        treeProvider.setKeboolaApi(keboolaApi, {
+            apiUrl: settings.apiUrl,
+            token: settings.token
+        });
     }
 }
 
@@ -77,7 +83,7 @@ function registerCommands(context: vscode.ExtensionContext) {
     const refreshCmd = vscode.commands.registerCommand('keboola.refresh', () => {
         // Reinitialize API from current settings
         initializeFromSettings(context);
-        treeProvider.refresh();
+        // Note: initializeFromSettings already calls treeProvider.refresh() via setKeboolaApi
     });
 
     // Refresh configurations only
@@ -140,6 +146,31 @@ function registerCommands(context: vscode.ExtensionContext) {
         await showConfigurationDetails(item.component.id, item.configuration.id, item.branch.id, context);
     });
 
+    // Refresh jobs only
+    const refreshJobsCmd = vscode.commands.registerCommand('keboola.refreshJobs', () => {
+        treeProvider.refreshJobs();
+    });
+
+    // Show job details
+    const showJobCmd = vscode.commands.registerCommand('keboola.showJob', async (item?: TreeItem) => {
+        if (!item || !item.job) {
+            vscode.window.showErrorMessage('No job selected');
+            return;
+        }
+
+        await showJobDetails(item.job.id, context);
+    });
+
+    // Show jobs for configuration (context menu on configuration)
+    const showJobsForConfigCmd = vscode.commands.registerCommand('keboola.showJobsForConfiguration', async (item?: TreeItem) => {
+        if (!item || !item.configuration || !item.component) {
+            vscode.window.showErrorMessage('No configuration selected');
+            return;
+        }
+
+        await showJobsForConfiguration(item.component.id, item.configuration.id, item.branch?.id, context);
+    });
+
     // Add all commands to subscriptions
     context.subscriptions.push(
         settingsCmd,
@@ -151,7 +182,10 @@ function registerCommands(context: vscode.ExtensionContext) {
         showBucketCmd,
         showStageCmd,
         showBranchCmd,
-        showConfigurationCmd
+        showConfigurationCmd,
+        refreshJobsCmd,
+        showJobCmd,
+        showJobsForConfigCmd
     );
 }
 
@@ -339,7 +373,8 @@ async function showBranchDetails(branchId: string, context: vscode.ExtensionCont
             ConfigurationsPanel.createOrShow(
                 branchDetail,
                 context.extensionUri,
-                keboolaApi
+                keboolaApi,
+                treeProvider
             );
         });
     } catch (error) {
@@ -402,7 +437,8 @@ async function showConfigurationDetails(componentId: string, configurationId: st
             ConfigurationsPanel.createOrShow(
                 configDetail,
                 context.extensionUri,
-                keboolaApi
+                keboolaApi,
+                treeProvider
             );
         });
     } catch (error) {
@@ -412,6 +448,101 @@ async function showConfigurationDetails(componentId: string, configurationId: st
         } else {
             vscode.window.showErrorMessage(`Failed to load configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    }
+}
+
+async function showJobDetails(jobId: string, context: vscode.ExtensionContext) {
+    try {
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
+            return;
+        }
+
+        // Initialize Jobs API
+        const hostMatch = settings.apiUrl.match(/https?:\/\/([^\/]+)/);
+        if (!hostMatch) {
+            vscode.window.showErrorMessage('Invalid API URL format');
+            return;
+        }
+
+        const jobsApi = new JobsApi(hostMatch[1], settings.token);
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Loading job details...",
+            cancellable: false
+        }, async () => {
+            const jobDetail = await jobsApi.getJobDetail(jobId);
+
+            JobDetailPanel.createOrShow(
+                jobDetail,
+                context.extensionUri,
+                jobsApi
+            );
+        });
+    } catch (error) {
+        console.error('Failed to load job details:', error);
+        if (error instanceof Error && error.name === 'JobsApiError') {
+            vscode.window.showErrorMessage(`Failed to load job: ${error.message}`);
+        } else {
+            vscode.window.showErrorMessage(`Failed to load job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+}
+
+async function showJobsForConfiguration(componentId: string, configurationId: string, branchId: string | undefined, context: vscode.ExtensionContext) {
+    try {
+        const settings = getSettingsFromContext(context);
+        
+        if (!settings.apiUrl || !settings.token) {
+            vscode.window.showErrorMessage(
+                'Please configure your Keboola connection in Settings first.',
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    SettingsPanel.createOrShow(context, context.extensionUri);
+                }
+            });
+            return;
+        }
+
+        const jobs = await treeProvider.getJobsForConfiguration(componentId, configurationId, branchId);
+
+        if (jobs.length === 0) {
+            vscode.window.showInformationMessage(`No jobs found for configuration ${componentId}/${configurationId}`);
+            return;
+        }
+
+        // Show a quick pick with recent jobs
+        const jobItems = jobs.map(job => ({
+            label: `${job.status} • ${job.id}`,
+            description: `${job.createdTime} • Duration: ${job.durationSeconds ? `${job.durationSeconds}s` : 'N/A'}`,
+            detail: job.error?.message || job.result?.message || '',
+            job: job
+        }));
+
+        const selectedJob = await vscode.window.showQuickPick(jobItems, {
+            placeHolder: `Select a job for ${componentId}/${configurationId}`,
+            matchOnDescription: true,
+            matchOnDetail: true
+        });
+
+        if (selectedJob) {
+            await showJobDetails(selectedJob.job.id, context);
+        }
+
+    } catch (error) {
+        console.error('Failed to load jobs for configuration:', error);
+        vscode.window.showErrorMessage(`Failed to load jobs: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

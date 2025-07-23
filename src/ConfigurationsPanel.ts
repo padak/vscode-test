@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { KeboolaApi, KeboolaBranchDetail, KeboolaConfigurationDetail } from './keboolaApi';
+import { KeboolaTreeProvider } from './KeboolaTreeProvider';
 
 export class ConfigurationsPanel {
     public static currentPanel: ConfigurationsPanel | undefined;
@@ -8,11 +9,13 @@ export class ConfigurationsPanel {
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
+    private _treeProvider?: KeboolaTreeProvider;
 
     public static createOrShow(
         content: KeboolaBranchDetail | KeboolaConfigurationDetail,
         extensionUri: vscode.Uri,
-        keboolaApi?: KeboolaApi
+        keboolaApi?: KeboolaApi,
+        treeProvider?: KeboolaTreeProvider
     ) {
         const column = vscode.window.activeTextEditor?.viewColumn;
 
@@ -34,16 +37,17 @@ export class ConfigurationsPanel {
             }
         );
 
-        ConfigurationsPanel.currentPanel = new ConfigurationsPanel(panel, extensionUri, content);
+        ConfigurationsPanel.currentPanel = new ConfigurationsPanel(panel, extensionUri, content, treeProvider);
     }
 
     public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         ConfigurationsPanel.currentPanel = new ConfigurationsPanel(panel, extensionUri, null);
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, content: KeboolaBranchDetail | KeboolaConfigurationDetail | null) {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, content: KeboolaBranchDetail | KeboolaConfigurationDetail | null, treeProvider?: KeboolaTreeProvider) {
         this._panel = panel;
         this._extensionUri = extensionUri;
+        this._treeProvider = treeProvider;
 
         // Set the webview's initial html content
         if (content) {
@@ -52,6 +56,22 @@ export class ConfigurationsPanel {
 
         // Listen for when the panel is disposed
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Handle messages from the webview
+        this._panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'loadRecentJobs':
+                        this._loadRecentJobs(message.componentId, message.configurationId, message.branchId);
+                        return;
+                    case 'showJobDetails':
+                        this._showJobDetails(message.jobId);
+                        return;
+                }
+            },
+            null,
+            this._disposables
+        );
     }
 
     private _updateContent(content: KeboolaBranchDetail | KeboolaConfigurationDetail) {
@@ -301,8 +321,188 @@ export class ConfigurationsPanel {
             ` : ''}
         </div>
     </div>
+    
+    <div id="recentJobsSection" class="section">
+        <div class="section-title">📊 Recent Jobs</div>
+        <div id="recentJobsContent">Loading recent jobs...</div>
+    </div>
+    
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        // Load recent jobs when the page loads
+        window.addEventListener('load', () => {
+            vscode.postMessage({
+                command: 'loadRecentJobs',
+                componentId: '${config.componentId}',
+                configurationId: '${config.id}',
+                branchId: '${config.branchId}'
+            });
+        });
+        
+        // Listen for messages from the extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.command) {
+                case 'showRecentJobs':
+                    showRecentJobs(message.jobs);
+                    break;
+            }
+        });
+        
+        function showRecentJobs(jobs) {
+            const container = document.getElementById('recentJobsContent');
+            if (!container) return;
+            
+            if (!jobs || jobs.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--vscode-descriptionForeground); padding: 20px; font-style: italic;">No recent jobs found</div>';
+                return;
+            }
+            
+            const jobsHtml = jobs.map(job => {
+                const statusClass = getStatusClass(job.status);
+                const duration = job.durationSeconds ? formatDuration(job.durationSeconds) : 'N/A';
+                const createdTime = new Date(job.createdTime).toLocaleString();
+                
+                return \`
+                    <tr onclick="showJobDetails('\${job.id}')" style="cursor: pointer;">
+                        <td>
+                            <span class="job-status \${statusClass}">\${job.status}</span>
+                        </td>
+                        <td class="job-id">\${job.id}</td>
+                        <td>\${createdTime}</td>
+                        <td>\${duration}</td>
+                        <td class="job-message">\${job.error?.message || job.result?.message || '-'}</td>
+                    </tr>
+                \`;
+            }).join('');
+            
+            container.innerHTML = \`
+                <table class="jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Job ID</th>
+                            <th>Created</th>
+                            <th>Duration</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        \${jobsHtml}
+                    </tbody>
+                </table>
+                <style>
+                    .jobs-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                    }
+                    .jobs-table th {
+                        background-color: var(--vscode-editor-selectionBackground);
+                        color: var(--vscode-editor-foreground);
+                        padding: 10px 8px;
+                        text-align: left;
+                        font-weight: bold;
+                        border-bottom: 2px solid var(--vscode-panel-border);
+                    }
+                    .jobs-table td {
+                        padding: 8px;
+                        border-bottom: 1px solid var(--vscode-panel-border);
+                        vertical-align: top;
+                    }
+                    .jobs-table tr:hover {
+                        background-color: var(--vscode-list-hoverBackground);
+                    }
+                    .job-status {
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                    }
+                    .job-status.success { background-color: #28a745; color: white; }
+                    .job-status.error { background-color: #dc3545; color: white; }
+                    .job-status.warning { background-color: #ffc107; color: black; }
+                    .job-status.processing { background-color: #007bff; color: white; }
+                    .job-status.waiting { background-color: #6c757d; color: white; }
+                    .job-status.created { background-color: #6c757d; color: white; }
+                    .job-id {
+                        font-family: var(--vscode-editor-font-family);
+                        font-size: 11px;
+                        color: var(--vscode-descriptionForeground);
+                    }
+                    .job-message {
+                        max-width: 200px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        font-size: 12px;
+                    }
+                </style>
+            \`;
+        }
+        
+        function getStatusClass(status) {
+            switch (status) {
+                case 'success': return 'success';
+                case 'error': return 'error';
+                case 'warning': return 'warning';
+                case 'processing': return 'processing';
+                case 'waiting': return 'waiting';
+                case 'created': return 'created';
+                default: return 'waiting';
+            }
+        }
+        
+        function formatDuration(seconds) {
+            if (seconds < 60) return \`\${seconds}s\`;
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            if (minutes < 60) return \`\${minutes}m \${remainingSeconds}s\`;
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            return \`\${hours}h \${remainingMinutes}m \${remainingSeconds}s\`;
+        }
+        
+        function showJobDetails(jobId) {
+            vscode.postMessage({
+                command: 'showJobDetails',
+                jobId: jobId
+            });
+        }
+    </script>
 </body>
 </html>`;
+    }
+
+    private async _loadRecentJobs(componentId: string, configurationId: string, branchId: string) {
+        if (!this._treeProvider) {
+            this._panel.webview.postMessage({
+                command: 'showRecentJobs',
+                jobs: []
+            });
+            return;
+        }
+
+        try {
+            const jobs = await this._treeProvider.getJobsForConfiguration(componentId, configurationId, branchId);
+            this._panel.webview.postMessage({
+                command: 'showRecentJobs',
+                jobs: jobs
+            });
+        } catch (error) {
+            console.error('Failed to load recent jobs:', error);
+            this._panel.webview.postMessage({
+                command: 'showRecentJobs',
+                jobs: []
+            });
+        }
+    }
+
+    private _showJobDetails(jobId: string) {
+        // Use the extension's showJobDetails command
+        vscode.commands.executeCommand('keboola.showJob', { job: { id: jobId } });
     }
 
     public dispose() {

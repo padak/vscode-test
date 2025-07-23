@@ -5,6 +5,430 @@ All notable changes to the Keboola Storage API Explorer extension will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.2] - 2025-07-21
+
+### 🐛 CRITICAL FIX: Unified Configuration Storage System
+- **🔧 Fixed Jobs API Authentication**: Resolved 401 Unauthorized errors by unifying configuration storage
+- **⚙️ Configuration Consistency**: All API clients (Storage, Configurations, Jobs) now use the same settings source
+- **🔄 Settings Synchronization**: Extension Settings panel now properly updates all API clients
+- **📋 Root Cause Resolution**: Eliminated dual configuration system that caused Storage/Configurations to work while Jobs failed
+
+### 🚨 Problem Identified
+#### **Dual Configuration System Issue:**
+- **Storage & Configurations**: Used `context.globalState` (Extension's private storage) ✅
+- **Jobs**: Used `vscode.workspace.getConfiguration()` (VS Code User Settings JSON) ❌
+- **Settings Panel**: Saved to Extension storage, not VS Code settings
+- **Result**: Settings panel updates didn't affect Jobs API, causing authentication failures
+
+#### **Evidence from Debug Logs:**
+```
+Extension Token (Working): 33-125-SL9NoBpdlB14cmE0bCXv3f4DKvBaEUSAVYHjVBuL
+VS Code JSON Token (Failing): 33-125-NHiTn3bWwl6S1TLD4poUcczUWBUFw7REz0O1xBJB
+```
+
+### ✨ Fixed - Configuration System Unification
+- **Removed Inconsistent Storage**: Jobs no longer read from VS Code User Settings JSON
+- **Unified API Initialization**: All API clients receive configuration from same source (Extension storage)
+- **Enhanced setKeboolaApi()**: Now accepts configuration parameter to ensure consistency
+- **Synchronized Updates**: Settings panel changes immediately affect all API clients
+
+### 🔧 Technical Implementation
+#### **Before (Broken):**
+```typescript
+// Extension.ts (Storage & Configurations)
+function getSettingsFromContext(context) {
+    return { token: context.globalState.get('keboola.token') };  // Extension storage
+}
+
+// KeboolaTreeProvider.ts (Jobs)
+const config = getStoredConfig();  // VS Code JSON storage
+```
+
+#### **After (Fixed):**
+```typescript
+// All API clients use same config source
+setKeboolaApi(api: KeboolaApi | undefined, config?: {apiUrl: string, token: string}) {
+    // Jobs API gets same config as Storage API
+    this.jobsApi = new JobsApi(hostMatch[1], config.token);  // Same token!
+}
+```
+
+### 📊 Configuration Flow (Fixed)
+#### **Unified Settings Path:**
+1. **Settings Panel** → `context.globalState.update()` (Extension storage)
+2. **initializeFromSettings()** → `getSettingsFromContext()` (Extension storage)
+3. **KeboolaApi** initialization → Same token
+4. **JobsApi** initialization → Same token (passed as parameter)
+5. **All APIs authenticated** ✅
+
+### 🎯 User Impact
+#### **Before Fix:**
+- ❌ Jobs section showed "Failed to load jobs: HTTP 401: Unauthorized"
+- ✅ Storage and Configurations worked normally
+- 🔄 Settings panel changes had no effect on Jobs
+
+#### **After Fix:**
+- ✅ Jobs section loads successfully with real-time job monitoring
+- ✅ Storage and Configurations continue working
+- ✅ Settings panel changes immediately affect all sections
+- ✅ Single source of truth for all API authentication
+
+### 🔍 Debug Benefits Maintained
+- **Enhanced Logging**: All debug logging from v3.1.1 preserved
+- **Token Masking**: Security-safe logging continues to work
+- **Request Tracking**: Full API request/response logging maintained
+- **Configuration Visibility**: Settings initialization now properly logged
+
+### 📦 Technical Details
+- **Extension Size**: 359.70KB (105 files)
+- **User-Agent**: Updated to 'Keboola-VSCode-Extension/3.1.2'
+- **Configuration Source**: Unified to Extension's globalState storage
+- **API Compatibility**: All existing Storage and Configuration functionality preserved
+
+### 🚀 Version 3.1.2 Impact
+This critical patch release resolves the fundamental configuration inconsistency that prevented the Jobs monitoring system from working properly. The fix ensures all API clients use the same authentication token source, eliminating the 401 Unauthorized errors while maintaining all existing functionality and debug capabilities.
+
+**All three API systems (Storage, Configurations, Jobs) now use unified authentication!** 🔑✅
+
+---
+
+## [3.1.1] - 2025-07-21
+
+### 🔧 DEBUG: Enhanced Logging for Jobs API Troubleshooting
+- **🔍 Comprehensive API Logging**: Added detailed logging to diagnose 401 Unauthorized errors in Jobs API
+- **🕵️ Request Inspection**: Logs exact URLs, headers, and parameters being sent to Keboola Queue API
+- **🛡️ Security-Safe Logging**: Token values are masked in logs (shows only first/last 8 characters)
+- **📋 Initialization Tracking**: Detailed logging of JobsApi initialization and host conversion process
+- **🔄 Parameter Visibility**: Logs all search parameters for each job group (running, failed, finished, all)
+- **📊 Response Analysis**: Captures HTTP status codes, response headers, and error details
+
+### ✨ Added - Debug Logging Infrastructure
+- **JobsApi.constructor()**: Logs host conversion from connection to queue URL and masked token
+- **JobsApi.makeRequest()**: Comprehensive request/response logging with masked authentication headers
+- **KeboolaTreeProvider.setKeboolaApi()**: Logs JobsApi initialization process and configuration details
+- **JobsTreeProvider.loadJobsForGroup()**: Logs job loading attempts and search parameters for each group
+- **Error Response Logging**: Captures full error response bodies and HTTP status details
+- **Network Error Tracking**: Logs network failures and request timeouts
+
+### 🔍 Debug Information Captured
+#### **JobsApi Initialization:**
+```
+[JobsApi] Initialized with:
+[JobsApi]   Original host: connection.eu-central-1.keboola.com
+[JobsApi]   Base URL: https://queue.eu-central-1.keboola.com
+[JobsApi]   Token: 33-125-N...REz0O1xB
+```
+
+#### **API Request Details:**
+```
+[JobsApi] Making request:
+[JobsApi]   URL: https://queue.eu-central-1.keboola.com/search/jobs?status=success,warning&since=2025-07-21T15:00:30.000Z&limit=50&offset=0&sort=createdTime&order=desc
+[JobsApi]   Method: GET
+[JobsApi]   Headers: {
+  X-StorageApi-Token: "33-125-N...REz0O1xB",
+  Content-Type: "application/json",
+  User-Agent: "Keboola-VSCode-Extension/3.1.1"
+}
+```
+
+#### **Response Analysis:**
+```
+[JobsApi] Response received:
+[JobsApi]   Status: 401 Unauthorized
+[JobsApi]   Headers: {...}
+[JobsApi] Error response body: {"error": {"message": "Token does not have required permissions"}}
+```
+
+### 🎯 Troubleshooting Benefits
+#### **For Developers:**
+- **API Comparison**: Compare extension requests with working curl commands
+- **Token Validation**: Verify correct token is being used and properly formatted
+- **URL Construction**: Ensure host conversion from connection to queue is working correctly
+- **Parameter Verification**: Confirm search parameters match expected values
+
+#### **For Support:**
+- **Request Visibility**: See exact API calls being made by the extension
+- **Error Diagnosis**: Detailed error messages and HTTP status codes
+- **Configuration Debug**: Verify API initialization and settings are correct
+- **Network Debugging**: Identify network vs. authentication vs. authorization issues
+
+### 💡 Debug Usage
+1. **Open VS Code Developer Console**: Help → Toggle Developer Tools → Console tab
+2. **Expand Jobs Section**: Click on Jobs in Keboola tree view to trigger API calls
+3. **Review Console Logs**: Look for `[JobsApi]`, `[KeboolaTreeProvider]`, and `[JobsTreeProvider]` prefixed messages
+4. **Compare with Curl**: Use logged parameters to create equivalent curl commands for testing
+5. **Identify Differences**: Compare working curl vs. failing extension requests
+
+### 🔧 Technical Implementation
+- **Secure Logging**: Token masking prevents credential exposure in logs
+- **Structured Output**: Consistent log format with clear prefixes and context
+- **Error Preservation**: Full error response capture for detailed troubleshooting
+- **Performance Monitoring**: Response time and size logging for performance analysis
+- **TypeScript Safety**: Proper type handling with 'as const' for literal types
+
+### 📦 Package Details
+- **Extension Size**: 357.91KB (105 files)
+- **User-Agent**: Updated to 'Keboola-VSCode-Extension/3.1.1'
+- **Debug Impact**: Logging only in console, no user-facing changes
+- **Production Ready**: Debug logs can be safely used in production environments
+
+### 🚀 Version 3.1.1 Impact
+This patch release adds comprehensive debug logging to help diagnose and resolve the 401 Unauthorized errors encountered with the Jobs API. The enhanced logging provides complete visibility into API requests without compromising security, enabling quick identification of authentication and configuration issues.
+
+**The extension now provides detailed debug information to help resolve Jobs API authentication issues!** 🔍🛠️
+
+---
+
+## [3.1.0] - 2025-07-21
+
+### 🚀 MAJOR FEATURE: Comprehensive Jobs Monitoring System
+- **🆕 NEW: Complete Jobs Section** - Enterprise-grade job monitoring alongside Storage and Configurations
+- **📊 Real-time Job Tracking**: Monitor running, failed, and completed jobs with live status updates
+- **🎯 Smart Job Filtering**: Pre-organized groups for Running, Failed (24h), Finished (24h), and All jobs
+- **💼 Job Detail Panels**: Rich WebView panels with comprehensive job metadata, timing, and metrics
+- **🔗 Configuration Integration**: Recent Jobs section in configuration detail panels
+- **⚡ Queue API Integration**: Direct connection to Keboola Queue API with automatic host conversion
+
+### ✨ Added - New Jobs Monitoring Infrastructure
+- **JobsApi.ts**: Complete Queue API client with job search, detail fetching, and status management
+- **JobsTreeProvider.ts**: Hierarchical job browsing with lazy loading and pagination support
+- **JobDetailPanel.ts**: Rich job detail WebView with action buttons and real-time updates
+- **Queue API Endpoints**: Integration with `GET /search/jobs` and `GET /jobs/{jobId}` endpoints
+- **Smart Host Conversion**: Automatic conversion from `connection.` to `queue.` hostnames
+- **Job Status Icons**: Visual status indicators with appropriate colors and symbols
+- **Pagination System**: "Load more..." functionality for efficient handling of large job lists
+- **Job Search & Filtering**: Advanced search with componentId, configurationId, branchId, and status filters
+
+### 🎯 Jobs Tree Structure
+#### **Root Jobs Section:**
+```
+🔄 Jobs
+├── 🏃 Running (live jobs)
+├── ❌ Failed (last 24h)
+├── ✅ Finished (last 24h)
+└── 📋 All (latest 200)
+```
+
+#### **Job Display Format:**
+```
+✅ success • keboola.ex-salesforce/main-config • 2h ago
+❌ error • transformation.python/data-processing • 5m ago
+🏃 processing • writer.bigquery/warehouse-sync • running 3m
+```
+
+### 💼 Job Detail Panel Features
+#### **Comprehensive Job Information:**
+- **Component Details**: Component ID, Configuration ID, Branch, Project, Run ID
+- **Timing Information**: Created, Started, Ended timestamps with duration calculation
+- **User Context**: Created by user, token information, and execution context
+- **Status Management**: Real-time status with appropriate badges and colors
+- **Error Handling**: Detailed error messages and exception IDs
+- **Result Information**: Success messages and configuration version tracking
+- **Metrics Display**: Input/output bytes, compression ratios, and usage statistics
+
+#### **Interactive Actions:**
+- **🔄 Refresh Job**: Real-time job status and detail updates
+- **📋 Copy Job ID**: Quick clipboard access for job identification
+- **🚀 Open in Keboola UI**: Direct link to job in Keboola Connection interface
+
+#### **Technical Data:**
+- **Raw JSON Display**: Complete API response with syntax highlighting
+- **Parameter Visibility**: Job configuration parameters and runtime settings
+- **Log Integration**: Access to job execution logs and debugging information
+
+### 🔗 Configuration Integration Features
+#### **Recent Jobs in Configuration Panels:**
+- **Automatic Loading**: Fetches last 20 jobs for specific componentId + configurationId + branchId
+- **Interactive Jobs Table**: Status, Job ID, Created time, Duration, and Messages
+- **Click-to-View**: Direct access to job details from configuration context
+- **Real-time Updates**: Fresh job data loaded when configuration panels open
+- **Status Visualization**: Color-coded status badges with hover information
+
+#### **Configuration Context Menu:**
+- **"Show Jobs for This Configuration"**: Quick access to configuration-specific job history
+- **Job History Browser**: Filtered view of jobs related to specific configurations
+- **Execution Timeline**: Chronological view of configuration runs and results
+
+### 🏗️ Technical Implementation
+#### **Queue API Integration:**
+- **Host Resolution**: Automatic conversion from Storage API host to Queue API host
+- **Authentication**: Shared token system with existing Storage and Configurations APIs
+- **Error Handling**: Comprehensive error management with user-friendly messages
+- **Rate Limiting**: Efficient API usage with smart caching and pagination
+- **Response Processing**: Full TypeScript type safety with comprehensive interfaces
+
+#### **Performance Optimizations:**
+- **Lazy Loading**: Jobs loaded only when tree nodes expanded
+- **Smart Caching**: In-memory job cache for improved performance
+- **Pagination**: Efficient handling of large job lists with "Load more" functionality
+- **Async Operations**: Non-blocking tree operations with proper loading states
+- **Memory Management**: Efficient data structures and automatic cache cleanup
+
+#### **User Experience Design:**
+- **Consistent UI**: Same visual styling as Storage and Configurations sections
+- **Progressive Disclosure**: Hierarchical information with appropriate detail levels
+- **Status Communication**: Clear visual indicators for job states and progress
+- **Context Preservation**: Maintains user navigation state during operations
+- **Error Recovery**: Graceful fallback with helpful error messages
+
+### 📊 Job Status Management
+#### **Status Types Supported:**
+- **created**: Job queued but not started
+- **waiting**: Job waiting for resources
+- **processing**: Job currently executing
+- **success**: Job completed successfully
+- **error**: Job failed with errors
+- **warning**: Job completed with warnings
+- **terminating**: Job being cancelled
+- **cancelled/terminated**: Job stopped by user or system
+
+#### **Status Visualization:**
+- **Color Coding**: Green (success), Red (error), Blue (processing), Yellow (warning), Gray (waiting)
+- **Icon Mapping**: Appropriate VS Code theme icons for each status type
+- **Time Display**: Relative time formatting (5m ago, 2h ago, 3d ago)
+- **Duration Calculation**: Smart duration formatting (45s, 5m 30s, 2h 15m 45s)
+
+### 🔄 Commands & Navigation
+#### **New Commands Added:**
+- **`keboola.refreshJobs`**: Refresh Jobs tree and reload current data
+- **`keboola.showJob`**: Open detailed job information panel
+- **`keboola.showJobsForConfiguration`**: Show jobs filtered by configuration
+
+#### **Command Integration:**
+- **Command Palette**: "Keboola: Refresh Jobs", "Keboola: Show Job Details"
+- **Context Menus**: Right-click job items for quick actions
+- **Tree View Actions**: Inline refresh buttons and job detail access
+- **Configuration Context**: Job commands available from configuration panels
+
+### 🔧 Enhanced Components
+#### **KeboolaTreeProvider.ts Updates:**
+- **Jobs Section Integration**: Added Jobs root node alongside Storage and Configurations
+- **Delegation Pattern**: Efficient delegation to JobsTreeProvider for job-specific operations
+- **Shared API Management**: Jobs API initialization using existing connection settings
+- **Tree State Management**: Proper state handling for multi-section tree view
+
+#### **Extension.ts Enhancements:**
+- **Command Registration**: New job-related commands with proper parameter handling
+- **Job Detail Functions**: `showJobDetails()` and `showJobsForConfiguration()` implementations
+- **Quick Pick Integration**: Job selection interface for configuration-based job browsing
+- **Progress Integration**: Loading indicators for job operations
+
+#### **Enhanced ConfigurationsPanel.ts:**
+- **Recent Jobs Section**: Embedded job table within configuration detail panels
+- **WebView Integration**: JavaScript-based job interaction and detail viewing
+- **API Communication**: Seamless communication between WebView and extension host
+- **Dynamic Content**: Real-time job loading and display updates
+
+### 📋 Job Search & Filtering
+#### **Advanced Search Parameters:**
+- **Component Filtering**: Filter jobs by specific componentId
+- **Configuration Filtering**: Show jobs for specific configurationId
+- **Branch Filtering**: Filter by development branch or main branch
+- **Status Filtering**: Multiple status selection (success,error,processing)
+- **Time Range Filtering**: Since/until timestamp filtering
+- **Pagination**: Limit and offset for efficient large dataset handling
+
+#### **Smart Filtering Logic:**
+- **Pre-defined Groups**: Running jobs use `status: 'processing,waiting'`
+- **Time-based Groups**: Failed/Finished use 24-hour time windows
+- **Flexible Search**: All group supports unlimited filtering combinations
+- **Sorting Options**: Sort by createdTime, startTime, endTime, or duration
+
+### 🎨 UI/UX Enhancements
+#### **Visual Design:**
+- **VS Code Theme Integration**: Full compliance with VS Code color themes
+- **Status Badges**: Professional status indicators with appropriate colors
+- **Icon System**: Consistent iconography using VS Code theme icons
+- **Responsive Layout**: Flexible layouts adapting to different panel sizes
+- **Loading States**: Proper loading indicators and skeleton screens
+
+#### **User Interaction:**
+- **Hover Information**: Rich tooltips with job summary information
+- **Click Actions**: Intuitive click behavior for accessing job details
+- **Keyboard Navigation**: Full keyboard accessibility for tree navigation
+- **Context Sensitivity**: Right-click menus with relevant actions
+- **Progress Feedback**: Clear progress indication during API operations
+
+### 🔗 Integration Points
+#### **Storage Explorer Integration:**
+- **Shared Activity View**: Jobs appear in same sidebar as Storage and Configurations
+- **Unified API Client**: Same authentication and connection management
+- **Consistent Commands**: Same command patterns and registration approach
+- **Error Handling**: Unified error management and user notification system
+
+#### **Configurations Integration:**
+- **Job History Access**: Direct access to configuration execution history
+- **Context Linking**: Seamless navigation between configurations and their jobs
+- **Shared Filtering**: Configuration context automatically filters relevant jobs
+- **Panel Enhancement**: Configuration panels enhanced with job information
+
+### 📦 Technical Specifications
+#### **New Dependencies:**
+- **No External Dependencies**: Uses existing infrastructure and VS Code APIs
+- **Queue API Client**: Custom implementation with TypeScript interfaces
+- **WebView Components**: Standard VS Code WebView integration
+- **Tree Provider Extensions**: Built on existing tree provider patterns
+
+#### **Performance Metrics:**
+- **Extension Size**: 351.97KB (105 files, +3 new job-related files)
+- **API Efficiency**: Smart caching reduces redundant API calls
+- **Memory Usage**: Efficient data structures for large job datasets
+- **Loading Performance**: Lazy loading ensures responsive tree expansion
+
+#### **Type Safety:**
+- **Complete TypeScript Coverage**: All job-related interfaces and types defined
+- **API Response Types**: KeboolaJob, KeboolaJobDetail, JobsSearchParams interfaces
+- **Error Handling Types**: JobsApiError with structured error information
+- **Component Integration**: Proper type integration with existing systems
+
+### 🎯 User Workflows
+#### **Job Monitoring Workflow:**
+1. **Open Jobs Section**: Expand Jobs node in Keboola tree view
+2. **Browse Categories**: Choose Running, Failed, Finished, or All jobs
+3. **View Job Lists**: See paginated job lists with status and timing
+4. **Access Details**: Click any job to open comprehensive detail panel
+5. **Real-time Updates**: Refresh jobs or individual job details as needed
+
+#### **Configuration Job Analysis:**
+1. **Open Configuration**: View any configuration in Configurations section
+2. **Review Recent Jobs**: Automatic recent jobs table at bottom of panel
+3. **Analyze Execution**: Click job entries to see detailed execution information
+4. **Debug Issues**: Access error details and execution logs
+5. **Monitor Performance**: Review duration trends and success rates
+
+#### **Troubleshooting Workflow:**
+1. **Check Failed Jobs**: Navigate to Failed (last 24h) section
+2. **Identify Issues**: Review error messages and exception details
+3. **Access Logs**: Use job detail panels for comprehensive debugging
+4. **Open in Keboola**: Direct link to Keboola UI for advanced troubleshooting
+5. **Monitor Resolution**: Track job reruns and success recovery
+
+### 💡 Job Management Benefits
+#### **For Data Engineers:**
+- **Real-time Monitoring**: Live job status tracking without leaving VS Code
+- **Debug Efficiency**: Immediate access to job errors and execution details
+- **Pipeline Oversight**: Complete view of data pipeline execution status
+- **Performance Analysis**: Duration tracking and resource usage monitoring
+
+#### **For Developers:**
+- **Configuration Testing**: Easy tracking of configuration changes and their results
+- **Error Debugging**: Detailed error information with direct Keboola UI access
+- **Execution History**: Complete audit trail of configuration executions
+- **Integration Workflows**: Seamless job monitoring within development workflow
+
+#### **For DevOps Teams:**
+- **System Monitoring**: Overview of system health through job success rates
+- **Performance Tracking**: Historical job performance and duration analysis
+- **Issue Resolution**: Quick identification and resolution of failed jobs
+- **Capacity Planning**: Resource usage insights through job metrics
+
+### 🚀 Version 3.1.0 Impact
+This minor release adds comprehensive job monitoring capabilities to the AI Data Platform interface, providing complete visibility into data pipeline execution alongside existing storage and configuration management. The Jobs monitoring system integrates seamlessly with existing workflows while providing powerful new capabilities for debugging, monitoring, and optimizing data operations.
+
+**The extension now provides real-time job monitoring and execution tracking, completing the trilogy of Storage, Configurations, and Jobs management in a unified VS Code interface!** 🎉📊
+
+---
+
 ## [3.0.0] - 2025-07-21
 
 ### 🎉 MAJOR RELEASE: AI Data Platform with Configurations Management

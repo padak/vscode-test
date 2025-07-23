@@ -6,7 +6,7 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 
 ---
 
-## 🚀 **Key Features (Version 3.0.0)**
+## 🚀 **Key Features (Version 3.1.2)**
 
 ### 📊 **Storage Explorer** *(Preserved from v2.x)*
 - **Browse Your Data Structure**: See all your stages (in, out), buckets, and tables in a tree view
@@ -14,7 +14,7 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - **Detailed Information**: Get comprehensive details about tables, buckets, and stages
 - **Search & Navigate**: Easily find and navigate through your data assets
 
-### ⚙️ **NEW: Configurations Management**
+### ⚙️ **Configurations Management** *(Version 3.0.0)*
 - **Branch Explorer**: Browse all development branches in your project
 - **Main Branch Identification**: Default branch clearly marked as "Main Branch"
 - **Component Categories**: Organized view of Extractors, Writers, Transformations, Sandboxes, Data Apps, and Flows
@@ -22,6 +22,18 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - **Branch Details**: Rich metadata panels showing branch information, creation details, and custom metadata
 - **Configuration Metadata**: View configuration details including version, creator, and change descriptions
 - **Lazy Loading**: Components and configurations load only when needed for optimal performance
+
+### 📊 **NEW: Jobs Monitoring System** *(Version 3.1.0)*
+- **Real-time Job Tracking**: Monitor running, failed, and completed jobs with live status updates
+- **Smart Job Filtering**: Pre-organized groups for Running, Failed (24h), Finished (24h), and All jobs
+- **Job Detail Panels**: Rich WebView panels with comprehensive job metadata, timing, and metrics
+- **Configuration Integration**: Recent Jobs section in configuration detail panels shows execution history
+- **Queue API Integration**: Direct connection to Keboola Queue API with automatic host conversion
+- **Job Status Icons**: Visual status indicators with appropriate colors and symbols (success, error, processing, waiting)
+- **Advanced Search & Filtering**: Filter jobs by componentId, configurationId, branchId, and status
+- **Pagination Support**: "Load more..." functionality for efficient handling of large job lists
+- **Interactive Actions**: Refresh job status, copy job IDs, and open jobs in Keboola UI
+- **Performance Monitoring**: Duration tracking, resource usage insights, and execution timeline analysis
 
 ### 🔌 **Easy Connection Setup**
 - **Multi-Region Support**: Connect to any Keboola region (US, EU, Asia-Pacific)
@@ -62,11 +74,18 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - Great for documentation and data cataloging
 - Separate schema files for each table
 
-#### **NEW: Configuration Export**
+#### **Configuration Export** *(Version 3.0.0)*
 - **JSON Viewer**: Open configurations in read-only JSON editor tabs
 - **Metadata Panels**: Rich HTML panels with configuration details
 - **Branch Information**: Complete branch metadata and creation info
 - **Version Tracking**: View configuration versions and change descriptions
+
+#### **NEW: Jobs Management** *(Version 3.1.0)*
+- **Job History Export**: View and analyze job execution history
+- **Performance Reports**: Duration and resource usage analysis
+- **Error Debugging**: Detailed error messages and exception tracking
+- **Execution Timeline**: Track job runs across different configurations
+- **Status Monitoring**: Real-time job status with automatic refresh
 
 ### ⚙️ **Customizable Settings**
 
@@ -85,19 +104,25 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 
 #### **Activity Bar Integration**
 - Dedicated Keboola icon in VS Code's side panel
-- **Dual-Section View**: Storage and Configurations in the same unified interface
+- **Triple-Section View**: Storage, Configurations, and Jobs in the same unified interface
 - Always accessible from anywhere in your project
+- **Unified Navigation**: Switch seamlessly between data, configuration, and job monitoring
 
 #### **Smart Panels**
-- **Detail Panels**: Rich information displays for tables, buckets, stages, branches, and configurations
+- **Detail Panels**: Rich information displays for tables, buckets, stages, branches, configurations, and jobs
 - **Settings Panel**: Easy configuration management
 - **Automatic Updates**: Refresh data with dedicated refresh commands
-- **NEW: Configuration Panels**: Beautiful HTML panels for branch and configuration metadata
+- **Configuration Panels**: Beautiful HTML panels for branch and configuration metadata
+- **NEW: Job Detail Panels**: Comprehensive job information with timing, status, and error details
+- **NEW: Recent Jobs Integration**: Job history embedded in configuration detail panels
 
 #### **Enhanced Commands**
 - **Refresh Storage**: Update storage data only
-- **NEW: Refresh Configurations**: Update configurations data only
+- **Refresh Configurations**: Update configurations data only
+- **NEW: Refresh Jobs**: Update jobs data and status
 - **Show Details**: Context-aware detail views for any selected item
+- **NEW: Show Job Details**: Open comprehensive job information panels
+- **NEW: Show Jobs for Configuration**: View jobs filtered by specific configuration
 - **Command Palette**: Full command integration for power users
 
 #### **Export Workflow**
@@ -107,12 +132,21 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 4. Decide on headers (or use your default setting)
 5. Data appears in your workspace automatically!
 
-#### **NEW: Configuration Workflow**
+#### **Configuration Workflow**
 1. Browse to any branch in Configurations section
 2. Expand to see component categories
 3. Navigate through components and their configurations
 4. Click any configuration to open JSON in editor
 5. View metadata in the detail panel
+
+#### **NEW: Jobs Workflow** *(Version 3.1.0)*
+1. Navigate to Jobs section in the tree view
+2. Choose from Running, Failed (24h), Finished (24h), or All jobs
+3. Browse job lists with status and timing information
+4. Click any job to open detailed job information panel
+5. Use "Load more..." to see additional jobs
+6. Access job actions: refresh status, copy ID, open in Keboola UI
+7. View recent jobs for any configuration in the configuration detail panels
 
 ---
 
@@ -152,12 +186,21 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - **NEW**: Understand project setup and component organization
 - **NEW**: Review data processing workflows
 
-### **NEW: For DevOps & Configuration Management**
+### **For DevOps & Configuration Management** *(Enhanced in v3.0.0)*
 - **Branch Management**: Review and compare configurations across development branches
 - **Component Auditing**: Understand what components are configured and how
 - **Version Control**: Track configuration changes and versions
 - **Documentation**: Export configuration JSONs for documentation purposes
 - **Troubleshooting**: Quickly inspect component configurations when issues arise
+
+### **NEW: For Operations & Job Monitoring** *(Version 3.1.0)*
+- **Real-time Monitoring**: Track job execution status without leaving VS Code
+- **Performance Analysis**: Monitor job duration trends and resource usage
+- **Error Investigation**: Quick access to job errors and debugging information
+- **Pipeline Health**: Overview of system health through job success rates
+- **Troubleshooting**: Immediate access to failed job details and error messages
+- **Capacity Planning**: Resource usage insights for infrastructure planning
+- **Configuration Testing**: Track job results after configuration changes
 
 ---
 
@@ -168,11 +211,19 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - Start with small exports to understand data structure
 - Use metadata exports to document your data catalog
 
-### **NEW: Configuration Management**
+### **Configuration Management** *(Version 3.0.0)*
 - **Start with Main Branch**: Begin configuration exploration with the default branch
 - **Use Component Categories**: Navigate through organized component types (Extractors, Writers, etc.)
 - **JSON Editor Integration**: Leverage VS Code's JSON features for syntax highlighting and formatting
 - **Branch Comparison**: Use the refresh button to update configurations when switching contexts
+
+### **NEW: Jobs Monitoring** *(Version 3.1.0)*
+- **Start with Recent Jobs**: Check "All" group first to see overall system activity
+- **Use Smart Filters**: Running jobs for current activity, Failed for troubleshooting
+- **Monitor Performance**: Track job durations to identify performance bottlenecks
+- **Configuration Context**: Use Recent Jobs in configuration panels to see execution history
+- **Refresh Regularly**: Use refresh buttons to get latest job status updates
+- **Error Investigation**: Click failed jobs immediately for detailed error analysis
 
 ### **Workspace Organization**
 - Choose meaningful export folder names
@@ -190,13 +241,38 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - Regularly rotate your API tokens
 - Use workspace-local exports for sensitive data
 - Test connections before important export operations
-- **NEW**: Configuration data is read-only for security
+- Configuration data is read-only for security
+- **NEW**: Job data is read-only with secure token masking in debug logs
+- **NEW**: Unified authentication prevents token inconsistencies across all sections
 
 ---
 
-## 🔄 **What's New in Version 3.0.0**
+## 🔄 **What's New in Version 3.1.2**
 
-### 🆕 **Major New Features**
+### 🚀 **Version 3.1.0 - Jobs Monitoring System**
+#### 🆕 **Major New Features**
+- **📊 Jobs Monitoring**: Complete real-time job tracking and monitoring system
+- **🎯 Smart Filtering**: Pre-organized job groups (Running, Failed, Finished, All)
+- **💼 Job Detail Panels**: Rich WebView panels with comprehensive job metadata
+- **🔗 Configuration Integration**: Recent Jobs embedded in configuration detail panels
+- **⚡ Queue API Integration**: Direct connection to Keboola Queue API
+- **🔄 Real-time Updates**: Live job status tracking with refresh capabilities
+
+#### 🔧 **Enhanced Monitoring**
+- **📈 Performance Tracking**: Duration analysis and resource usage monitoring
+- **🔍 Error Debugging**: Detailed error messages and exception tracking
+- **🎮 Interactive Actions**: Refresh jobs, copy IDs, open in Keboola UI
+- **📱 Pagination Support**: Efficient handling of large job lists with "Load more"
+
+### 🐛 **Version 3.1.2 - Critical Configuration Fix**
+#### 🔧 **Unified Configuration System**
+- **🔑 Fixed Authentication**: Resolved 401 Unauthorized errors in Jobs API
+- **⚙️ Configuration Consistency**: All API clients now use unified settings storage
+- **🔄 Settings Synchronization**: Extension Settings panel properly updates all sections
+- **📋 Root Cause Resolution**: Eliminated dual configuration system
+
+### 🏗️ **Version 3.0.0 - Configurations Management** *(Previous Release)*
+#### 🆕 **Major Features**
 - **🏗️ Configurations Section**: Complete project configuration management
 - **🌿 Branch Explorer**: Browse and explore development branches
 - **📦 Component Categories**: Organized view of all component types
@@ -205,17 +281,19 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 - **🔄 Dedicated Refresh**: Separate refresh commands for Storage and Configurations
 - **⚡ Lazy Loading**: Performance-optimized loading of components and configurations
 
-### 🔧 **Enhanced Architecture**
-- **🎯 Unified Interface**: Storage and Configurations in the same activity view
+### 🔧 **Enhanced Architecture** *(Across All Versions)*
+- **🎯 Triple-Section Interface**: Storage, Configurations, and Jobs in unified view
 - **🔗 Shared API Client**: Single connection for all Keboola services
 - **📱 Responsive Design**: Panels adapt to VS Code themes and sizes
 - **🛡️ Error Handling**: Graceful error handling without breaking existing functionality
+- **🔑 Unified Authentication**: Consistent settings storage across all sections
 
-### 💪 **Developer Experience**
+### 💪 **Developer Experience** *(Continuously Enhanced)*
 - **📚 Complete Documentation**: Full feature documentation and use cases
-- **🎨 Consistent UI**: Same look and feel across Storage and Configurations
+- **🎨 Consistent UI**: Same look and feel across Storage, Configurations, and Jobs
 - **⌨️ Command Integration**: Full VS Code Command Palette support
 - **🔍 Context Awareness**: Smart context menus and actions
+- **🔧 Debug Capabilities**: Enhanced logging for troubleshooting API issues
 
 ---
 
@@ -226,7 +304,8 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 2. **Configure**: Open settings and add your Keboola connection details
 3. **Test**: Use the "Test Connection" button to verify setup
 4. **Explore Storage**: Browse your data in the Storage section
-5. **NEW: Explore Configurations**: Check out the Configurations section below Storage
+5. **Explore Configurations**: Check out the Configurations section below Storage
+6. **NEW: Monitor Jobs**: Track job execution in the Jobs section for real-time monitoring
 
 ### **Storage Workflow**
 1. **Browse**: Navigate through stages, buckets, and tables
@@ -234,11 +313,20 @@ The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that 
 3. **Export**: Use export buttons for data extraction
 4. **Customize**: Adjust export settings to match your workflow
 
-### **NEW: Configuration Workflow**
+### **Configuration Workflow**
 1. **Select Branch**: Start with "Main Branch" or choose a development branch
 2. **Browse Categories**: Explore Extractors, Writers, Transformations, etc.
 3. **View Components**: See all components in each category
 4. **Open Configurations**: Click any configuration to view JSON
 5. **Review Metadata**: Check the detail panel for additional information
 
-**Ready to manage your complete Keboola ecosystem like never before!** 🚀 
+### **NEW: Jobs Workflow** *(Version 3.1.0)*
+1. **Navigate to Jobs**: Find the Jobs section below Configurations
+2. **Choose Job Group**: Select Running, Failed, Finished, or All jobs
+3. **Browse Job Lists**: See job status, timing, and component information
+4. **View Job Details**: Click any job for comprehensive execution information
+5. **Monitor Performance**: Track duration, errors, and resource usage
+6. **Use Job Actions**: Refresh status, copy IDs, or open in Keboola UI
+7. **Check Configuration Jobs**: View recent jobs in configuration detail panels
+
+**Ready to manage your complete Keboola ecosystem with real-time job monitoring like never before!** 🚀📊 

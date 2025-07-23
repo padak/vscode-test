@@ -19,6 +19,9 @@ This command will:
 
 | Version | File Size | Release Date | Key Features |
 |---------|-----------|--------------|-------------|
+| 3.1.2   | 360KB     | 2025-07-21   | 🐛 CRITICAL FIX: Unified configuration storage system - resolved Jobs API 401 errors by eliminating dual settings |
+| 3.1.1   | 358KB     | 2025-07-21   | 🔍 DEBUG: Enhanced logging for Jobs API troubleshooting with comprehensive request/response analysis |
+| 3.1.0   | 352KB     | 2025-07-21   | 🚀 MAJOR: Complete Jobs Monitoring System with real-time tracking, smart filtering, and Queue API integration |
 | 3.0.0   | 317KB     | 2025-07-21   | 🎉 MAJOR: Added Configurations section with branches, components, JSON viewer, and metadata panels |
 | 2.8.1   | 284KB     | 2025-07-21   | FIXED: Export settings messages now appear in correct section (not near API token) |
 | 2.8.0   | 282KB     | 2025-07-21   | NEW: Configurable table naming (short names like "weather.csv" vs full "in.c-data.weather.csv") |
