@@ -5,6 +5,31 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.4] - 2025-07-21
+
+### 🐛 CRITICAL FIX: Extension Icon Display
+- **🎨 Fixed Missing Icon**: Added root-level `icon` field to package.json for proper extension icon display
+- **📦 Extension Marketplace**: Blue Keboola head now properly displays in VS Code Extensions view and marketplace
+- **🔧 Path Correction**: Fixed icon path format from `./media/keboola_blue.png` to `media/keboola_blue.png`
+- **✅ Packaging Success**: Resolved vsce packaging error that prevented icon inclusion
+
+### 📋 Technical Details
+#### **Issue Identified:**
+- **Activity Bar Icon**: ✅ Was working correctly (viewsContainer icon)
+- **Extension Icon**: ❌ Missing from package.json root level
+- **Error**: `The specified icon 'extension/./media/keboola_blue.png' wasn't found`
+
+#### **Solution Applied:**
+- **Added Root Icon**: `"icon": "media/keboola_blue.png"` at package.json root level
+- **Path Format**: Removed `./` prefix for proper vsce packaging
+- **Size Verification**: Icon is 83x136 PNG (meets VS Code requirements)
+
+### 🎯 Impact
+- **VS Code Extensions View**: Now shows blue Keboola head icon
+- **Extension Details**: Proper branding in extension information panel
+- **Marketplace Ready**: Icon will display correctly when published
+- **Professional Appearance**: Complete visual branding consistency
+
 ## [3.1.3] - 2025-07-21
 
 ### 🎨 MAJOR REBRANDING: From Explorer to Booster
