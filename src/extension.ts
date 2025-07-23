@@ -15,7 +15,7 @@ let treeView: vscode.TreeView<TreeItem>;
 let outputChannel: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Keboola Storage API Explorer is now active!');
+    	console.log('Keboola Data Engineering Booster is now active!');
 
     // Create output channel for logging
     outputChannel = vscode.window.createOutputChannel('Keboola Storage Explorer');
@@ -547,7 +547,7 @@ async function showJobsForConfiguration(componentId: string, configurationId: st
 }
 
 export function deactivate() {
-    console.log('Keboola Storage API Explorer is now deactivated');
+    	console.log('Keboola Data Engineering Booster is now deactivated');
 }
 
 export function getOutputChannel(): vscode.OutputChannel {

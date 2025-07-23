@@ -1,12 +1,12 @@
-# 🔧 Keboola AI Data Platform - Features Guide
+# 🔧 Keboola Data Engineering Booster - Features Guide
 
 ## 📋 **What This Extension Does**
 
-The **Keboola AI Data Platform** extension is a comprehensive VS Code tool that helps you browse, explore, and manage your entire Keboola ecosystem directly within your code editor. Beyond data exploration, it now provides complete project configuration management, making it your one-stop solution for Keboola development.
+The **Keboola Data Engineering Booster** extension is a comprehensive VS Code tool that helps you browse, explore, and manage your entire Keboola ecosystem directly within your code editor. Beyond data exploration, it now provides complete project configuration management, making it your one-stop solution for Keboola development.
 
 ---
 
-## 🚀 **Key Features (Version 3.1.2)**
+## 🚀 **Key Features (Version 3.1.3)**
 
 ### 📊 **Storage Explorer** *(Preserved from v2.x)*
 - **Browse Your Data Structure**: See all your stages (in, out), buckets, and tables in a tree view

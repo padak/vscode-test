@@ -1,9 +1,35 @@
 # Changelog
 
-All notable changes to the Keboola Storage API Explorer extension will be documented in this file.
+All notable changes to the Keboola Data Engineering Booster extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [3.1.3] - 2025-07-21
+
+### 🎨 MAJOR REBRANDING: From Explorer to Booster
+- **📦 Extension Name**: `keboola-storage-api-explorer` → `keboola-data-engineering-booster`
+- **🏷️ Display Name**: "Keboola Storage API Explorer" → "Keboola Data Engineering Booster"  
+- **📝 Description**: Updated to reflect comprehensive capabilities (Storage + Configurations + Jobs)
+- **🎯 Branding Scope**: Name now accurately represents the full platform management capabilities
+
+### ✨ Visual & UI Updates
+- **🎨 New Icon**: Switched from generic logo to blue Keboola head (`keboola_blue.png`)
+- **📱 Activity Bar**: Title updated from "Keboola Storage" to "Keboola Platform"
+- **📚 Documentation**: README.md updated with new branding throughout
+- **🔄 Consistent Naming**: All references updated to match new "Data Engineering Booster" identity
+
+### 🎯 Why "Data Engineering Booster"?
+- **📊 Beyond Storage**: Extension now manages Storage + Configurations + Jobs monitoring
+- **⚡ Productivity Focus**: "Booster" emphasizes efficiency and workflow acceleration  
+- **🔧 Engineering Tool**: Reflects the comprehensive data engineering capabilities
+- **🚀 Professional Branding**: More accurately represents the extension's enterprise-level functionality
+
+### 📋 Migration Notes
+- **📁 Package Name**: VSIX file now named `keboola-data-engineering-booster-3.1.3.vsix`
+- **⚙️ Settings**: All existing settings and configurations preserved
+- **🔄 Functionality**: Zero functional changes - pure rebranding update
+- **📈 Size**: 371.41KB (slight increase due to new icon)
 
 ## [3.1.2] - 2025-07-21
 
@@ -2406,7 +2432,7 @@ kbc remote table download in.c-main.products --output ./products.csv --limit 100
 ## [2.0.0] - 2025-07-21
 
 ### 🚀 Initial Release
-- **NEW**: Keboola Storage API Explorer extension for VS Code
+- **NEW**: Keboola Data Engineering Booster extension for VS Code
 - Tree view for browsing Keboola Storage buckets and tables
 - Basic table and bucket detail viewing
 - API connection management

@@ -1,100 +1,191 @@
-# 🧪 Padák Super Extension
+# Keboola Data Engineering Booster
 
-A minimal VS Code extension that demonstrates creating a WebView panel with a button that displays "Padák je super!" when clicked.
+A comprehensive Visual Studio Code extension for exploring and managing your Keboola Connection projects. Browse storage buckets and tables, manage configurations across branches, and monitor job execution - all from within VS Code.
 
 ## 🚀 Features
 
-- Registers a command `padak.sayHello` accessible via Command Palette
-- Opens a beautiful WebView panel with a styled button
-- When clicked, the button shows "Padák je super!" in multiple ways:
-  - Alert popup
-  - VS Code notification
-  - Console log
-  - Text display in the WebView
+### 📂 Storage Explorer
+- **Bucket Management**: Browse all storage buckets in your project
+- **Table Details**: View table schemas, metadata, and data previews
+- **Interactive Navigation**: Hierarchical tree view with expandable buckets
+- **Quick Access**: Direct links to Keboola Connection web interface
+
+### ⚙️ Configurations Management
+- **Branch Navigation**: Switch between development branches
+- **Component Organization**: Browse components by category (extractors, writers, transformations, etc.)
+- **Configuration Details**: View and edit component configurations
+- **Multi-Branch Support**: Manage configurations across different branches
+
+### 📊 Jobs Monitoring
+- **Real-Time Status**: Monitor running, failed, and completed jobs
+- **Job Details**: Comprehensive job information including logs and metadata
+- **Filtering**: View jobs by status, component, or time period
+- **Quick Actions**: Direct access to job details and related configurations
 
 ## 📋 Prerequisites
 
-- [Node.js](https://nodejs.org/) (version 16 or higher)
-- [Visual Studio Code](https://code.visualstudio.com/)
-- [TypeScript](https://www.typescriptlang.org/) (installed globally or via npm)
+- [Visual Studio Code](https://code.visualstudio.com/) (version 1.60.0 or higher)
+- Valid Keboola Connection project with API access
+- Storage API token with appropriate permissions
 
-## 🛠️ Setup Instructions
+## 🛠️ Installation
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### From VSIX Package
+1. Download the latest `.vsix` file from the `builds/` directory
+2. Open VS Code
+3. Go to Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X`)
+4. Click the "..." menu and select "Install from VSIX..."
+5. Select the downloaded `.vsix` file
 
-2. **Compile the TypeScript code:**
-   ```bash
-   npm run compile
-   ```
+### From Source
+1. Clone this repository
+2. Install dependencies: `npm install`
+3. Compile TypeScript: `npm run compile`
+4. Press `F5` to run in Extension Development Host
 
-## 🧪 Testing the Extension
+## ⚙️ Configuration
 
-### Method 1: Using F5 (Recommended)
+1. Open VS Code Settings (`Ctrl+,` or `Cmd+,`)
+2. Search for "Keboola"
+3. Configure the following settings:
+   - **Keboola URL**: Your Keboola Connection URL (e.g., `https://connection.keboola.com`)
+   - **Storage API Token**: Your Storage API token
+   - **Default Branch**: Default branch ID for configurations (optional)
 
-1. Open this project folder in VS Code
-2. Press `F5` or go to `Run > Start Debugging`
-3. This will open a new Extension Development Host window
-4. In the new window, open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
-5. Type "Say Hello Padák" and select the command
-6. A WebView panel will open with a button
-7. Click the button to see "Padák je super!" message!
+Alternatively, use the Command Palette:
+- Press `Ctrl+Shift+P` (or `Cmd+Shift+P`)
+- Type "Keboola: Configure Settings"
+- Follow the setup wizard
 
-### Method 2: Using the Run and Debug Panel
+## 🎯 Usage
 
-1. Open the Run and Debug panel (`Ctrl+Shift+D` or `Cmd+Shift+D`)
-2. Select "Run Extension" from the dropdown
-3. Click the green play button
-4. Follow steps 4-7 from Method 1
+### Getting Started
+1. After installation, open the Keboola Explorer panel in the Activity Bar
+2. Configure your connection settings (see Configuration section above)
+3. The extension will automatically load your project data
 
-## 🎯 How to Use
+### Storage Explorer
+- Expand buckets to view tables
+- Click on tables to view details in the panel
+- Use the refresh button to update bucket/table lists
+- Access table data and metadata through detail panels
 
-1. Once the extension is running in the Extension Development Host:
-   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) to open Command Palette
-   - Type "Say Hello Padák" or "Padák"
-   - Select the command from the list
-   - A WebView panel titled "Padák je super!" will open
-   - Click the "CLICK ME!" button
-   - Enjoy the message in multiple forms! 🎉
+### Configurations Management
+- Switch between branches using the branch selector
+- Browse components organized by type
+- View configuration details and parameters
+- Access recent jobs for each configuration
 
-## 📁 Project Structure
+### Jobs Monitoring
+- Monitor job status in real-time
+- Filter jobs by status (Running, Failed, Finished)
+- View detailed job information including logs
+- Navigate from jobs to their source configurations
+
+## 🏗️ Project Structure
 
 ```
-├── .vscode/
-│   ├── launch.json          # Debug configuration
-│   └── tasks.json           # Build tasks
+├── builds/                     # VSIX packages for different versions
 ├── src/
-│   └── extension.ts         # Main extension code
-├── package.json             # Extension manifest
-├── tsconfig.json           # TypeScript configuration
-└── README.md               # This file
+│   ├── jobs/                   # Jobs monitoring functionality
+│   │   ├── jobsApi.ts         # Queue API client
+│   │   ├── JobsTreeProvider.ts # Jobs tree view provider
+│   │   └── JobDetailPanel.ts  # Job detail panels
+│   ├── BranchDetailPanel.ts   # Branch information panels
+│   ├── BucketDetailPanel.ts   # Bucket detail panels
+│   ├── ConfigurationDetailPanel.ts # Configuration panels
+│   ├── ConfigurationsPanel.ts # Configuration management panels
+│   ├── ConfigurationsTreeProvider.ts # Configurations tree provider
+│   ├── KeboolaTreeProvider.ts # Main tree provider
+│   ├── TableDetailPanel.ts    # Table detail panels
+│   ├── extension.ts           # Main extension entry point
+│   ├── keboolaApi.ts          # Storage API client
+│   └── settings.ts            # Settings management
+├── package.json               # Extension manifest
+└── README.md                  # This file
 ```
 
 ## 🔧 Development
 
-- **Watch mode:** Run `npm run watch` to automatically compile changes
-- **Manual compile:** Run `npm run compile` to build once
-- **Debugging:** Use F5 to launch the extension in debug mode
+### Building
+```bash
+npm install          # Install dependencies
+npm run compile      # Compile TypeScript
+npm run watch        # Watch mode for development
+```
 
-## 🎨 Features Demonstrated
+### Debugging
+1. Open the project in VS Code
+2. Press `F5` to launch Extension Development Host
+3. Test the extension in the new window
 
-- ✅ Command registration
-- ✅ WebView panel creation
-- ✅ HTML/CSS/JavaScript in WebView
-- ✅ Message passing between WebView and extension
-- ✅ VS Code API integration
-- ✅ Beautiful gradient UI design
-- ✅ Responsive button interactions
+### Packaging
+```bash
+npm install -g vsce
+vsce package         # Creates .vsix file
+```
 
-## 🏗️ Built With
+## 📚 API Integration
 
-- TypeScript
-- VS Code Extension API
-- HTML/CSS/JavaScript for WebView
-- Modern CSS with gradients and animations
+This extension integrates with several Keboola APIs:
+
+- **Storage API**: Buckets, tables, and project information
+- **Components API**: Component configurations and metadata
+- **Queue API**: Job monitoring and execution details
+- **Management API**: Branch and project management
+
+## 🔒 Security
+
+- API tokens are stored securely in VS Code's extension storage
+- Tokens are masked in debug logs for security
+- All API communications use HTTPS
+
+## 🆕 Version History
+
+- **v3.1.2**: Unified authentication system across all sections
+- **v3.1.1**: Added comprehensive debug logging
+- **v3.1.0**: Introduced Jobs monitoring system
+- **v3.0.0**: Added Configurations management with branch support
+- **v2.x**: Storage Explorer functionality
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Unauthorized" errors:**
+- Verify your Storage API token is valid and has appropriate permissions
+- Check that the Keboola URL is correct
+- Ensure you're using the correct project token
+
+**Extension not loading:**
+- Restart VS Code
+- Check the Output panel for error messages
+- Verify all required settings are configured
+
+**Jobs not showing:**
+- Ensure your token has access to the Queue API
+- Check that the project has job history
+- Try refreshing the Jobs view
+
+### Debug Mode
+Enable debug logging in settings to troubleshoot issues:
+1. Open VS Code Settings
+2. Search for "Keboola Debug"
+3. Enable debug logging
+4. Check the Output panel for detailed logs
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ---
 
-**Happy coding! Padák je super! 🚀** 
+**Explore your Keboola projects efficiently with VS Code! 🚀** 

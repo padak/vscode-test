@@ -1,8 +1,8 @@
 {
-	"name": "keboola-storage-api-explorer",
-	"displayName": "Keboola Storage API Explorer",
-	"description": "Browse and explore Keboola Storage tables via direct API calls",
-	"version": "3.1.2",
+	"name": "keboola-data-engineering-booster",
+	"displayName": "Keboola Data Engineering Booster",
+	"description": "Comprehensive Keboola project management: explore storage, manage configurations across branches, and monitor job execution",
+	"version": "3.1.3",
 	"publisher": "keboola",
 	"engines": {
 		"vscode": "^1.74.0"
@@ -19,8 +19,8 @@
 			"activitybar": [
 				{
 					"id": "keboola-storage",
-					"title": "Keboola Storage",
-					"icon": "./media/logo.png"
+					"title": "Keboola Platform",
+					"icon": "./media/keboola_blue.png"
 				}
 			]
 		},
