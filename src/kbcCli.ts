@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getOutputChannel } from './extension';
 import { constructExportPath, constructBucketExportPath, constructStageExportPath, ensureDirectoryExists, extractStage, extractBucketId, getExportFolderName, getUseShortTableNames } from './workspaceUtils';
+import { DownloadsStore } from './watch/DownloadsStore';
+import { KeboolaApi } from './keboolaApi';
 
 export class KbcCliError extends Error {
     constructor(message: string, public readonly exitCode?: number) {
@@ -326,6 +328,14 @@ export async function exportTable(
             }
 
             outputChannel.appendLine(`🎉 Export complete! Check ${outputPath}`);
+
+            // Add to downloads store for table watching
+            try {
+                await addToDownloadsStore(tableId, outputPath, exportSettings, context);
+            } catch (storeError) {
+                console.log('[TableExport] Failed to add to downloads store:', storeError);
+                // Don't fail the export if store operation fails
+            }
 
             vscode.window.showInformationMessage(
                 `Table exported successfully to ${outputPath} (${limitText} rows, ${headersText})`,
@@ -902,5 +912,55 @@ export async function exportStageSchema(
         const message = error instanceof Error ? error.message : 'Unknown error';
         outputChannel.appendLine(`Failed to export stage schema: ${message}`);
         throw new KbcCliError(`Failed to export stage schema: ${message}`);
+    }
+}
+
+/**
+ * Add a successful table export to the downloads store for table watching
+ */
+async function addToDownloadsStore(
+    tableId: string,
+    outputPath: string,
+    exportSettings: ExportSettings,
+    context: vscode.ExtensionContext
+): Promise<void> {
+    try {
+        // Get current API settings to fetch table detail
+        const apiUrl = context.globalState.get<string>('keboola.apiUrl');
+        const token = context.globalState.get<string>('keboola.token');
+        
+        if (!apiUrl || !token) {
+            console.log('[addToDownloadsStore] No API settings available, skipping downloads store');
+            return;
+        }
+
+        // Get current project name for projectId
+        const projectName = context.globalState.get<string>('keboola.projectName') || 'unknown';
+        
+        // Fetch current table details to get lastImportDate
+        const api = new KeboolaApi({ apiUrl, token });
+        const tableDetail = await api.getTableDetail(tableId);
+        
+        if (!tableDetail.lastImportDate) {
+            console.log(`[addToDownloadsStore] No lastImportDate available for ${tableId}, skipping`);
+            return;
+        }
+
+        // Create or update download record
+        const downloadsStore = new DownloadsStore(context);
+        await downloadsStore.addDownload({
+            projectId: projectName,
+            tableId: tableId,
+            localPath: outputPath,
+            lastImportDate: tableDetail.lastImportDate,
+            limit: exportSettings.rowLimit,
+            headers: exportSettings.includeHeaders
+        });
+
+        console.log(`[addToDownloadsStore] Added/updated watch record for ${tableId}`);
+        
+    } catch (error) {
+        console.error('[addToDownloadsStore] Error:', error);
+        throw error;
     }
 }

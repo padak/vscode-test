@@ -5,6 +5,172 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2025-07-21
+
+### 🚀 MAJOR FEATURE: Automatic Table Re-check & Watch System
+- **🆕 NEW: Table Watching System** - Monitor downloaded tables for changes in Keboola and automatically re-download when data updates
+- **📦 Downloads Store** - Persistent tracking of all exported tables with their download parameters (row limits, headers, file paths)
+- **⏰ Background Monitoring** - Configurable interval checking (10-3600 seconds) with smart API rate limiting and error handling
+- **🔄 Auto-Download on Change** - Optional automatic re-download of tables when `lastImportDate` changes in Keboola
+- **👁️ Table Watch Commands** - "Watch This Table" and "Unwatch Table" context menu options for manual watch management
+
+### ✨ Added - Table Watcher Infrastructure
+- **DownloadsStore.ts**: Persistent storage for table download records with CRUD operations and project-level organization
+- **TableWatcher.ts**: Background service for monitoring table changes with configurable intervals and automatic re-downloads
+- **Export Integration**: All successful table exports automatically added to watch list with download parameters
+- **Settings Panel Integration**: New "Table Watcher" section with enable/disable, interval configuration, and auto-download toggle
+- **Context Menu Commands**: "Watch This Table" and "Unwatch Table" options available on all table nodes
+- **Command Palette**: "Keboola: Watch Table" and "Keboola: Unwatch Table" commands for global access
+
+### 🔧 Enhanced Export Workflow
+#### **Download Parameters Tracking:**
+- **Row Limits**: Stores actual limit used (0 = unlimited, or specific number)
+- **Headers**: Remembers whether --header flag was used during export
+- **File Paths**: Tracks exact local file location for re-downloads
+- **API Metadata**: Captures `lastImportDate` from table detail API for change detection
+- **Project Context**: Associates downloads with specific project for multi-project scenarios
+
+#### **Watch List Management:**
+- **Automatic Addition**: Tables added to watch list immediately after successful export
+- **Manual Control**: Users can watch/unwatch tables independently of export workflow
+- **Status Tracking**: Visual indicators and tooltips showing watch status
+- **Bulk Operations**: Support for watching multiple tables across different buckets/stages
+
+### ⚙️ Table Watcher Settings
+#### **Comprehensive Configuration:**
+- **Enable Watching**: Master toggle for entire table monitoring system (default: enabled)
+- **Check Interval**: 10-3600 seconds between API checks (default: 20 seconds)
+- **Auto-Download**: Automatically re-download changed tables vs. show notification (default: disabled)
+- **Per-Project Settings**: Watcher configuration stored separately for each Keboola project
+- **Settings Integration**: Watcher restarts automatically when settings change
+
+#### **User Experience Options:**
+```
+👁️ Table Watcher
+├─ ✅ Enable table watching          [Monitor downloaded tables for changes]
+├─ ⏱️ Check interval: 20 seconds     [How often to check for updates]  
+└─ 🔄 Auto-download changes         [Automatically re-download when table changes]
+```
+
+### 🛡️ Smart Monitoring & Error Handling
+#### **API Efficiency:**
+- **Sequential Processing**: Tables checked one at a time with 500ms delays to avoid API rate limits
+- **Error Recovery**: Graceful handling of 429 (rate limit) and 5xx (server error) responses
+- **Skip & Retry**: Failed checks skip to next interval without blocking other tables
+- **Connection Resilience**: Continues monitoring even during temporary API connectivity issues
+
+#### **Change Detection Logic:**
+- **lastImportDate Comparison**: Compares stored vs. current `lastImportDate` from table detail API
+- **Precise Tracking**: Only triggers on actual data changes, not metadata updates
+- **Update Persistence**: Stores new `lastImportDate` immediately when change detected
+- **False Positive Prevention**: Ignores tables without `lastImportDate` to avoid spurious notifications
+
+### 📊 User Notifications & Actions
+#### **Change Notifications:**
+- **Manual Mode**: "📊 Table 'customers' has been updated in Keboola" with "Download Now" action
+- **Auto Mode**: "✅ Table 'customers' updated and re-downloaded automatically" with "Open File" option
+- **Error Notifications**: Clear error messages for failed auto-downloads with fallback to manual notification
+
+#### **Interactive Options:**
+- **Download Now**: Immediately re-download table with stored parameters
+- **Open File**: Open existing local file in VS Code editor
+- **Dismiss**: Acknowledge notification without action
+- **File Navigation**: Success notifications include direct file access options
+
+### 🔄 Background Service Management
+#### **Lifecycle Integration:**
+- **Extension Activation**: TableWatcher starts automatically with stored settings
+- **Settings Changes**: Watcher restarts immediately when configuration updated
+- **Extension Deactivation**: Watcher stops cleanly to prevent memory leaks
+- **Error Isolation**: Watcher failures don't affect other extension functionality
+
+#### **Resource Management:**
+- **Memory Efficient**: Minimal memory footprint with efficient data structures
+- **CPU Considerate**: Configurable intervals prevent excessive CPU usage
+- **Network Respectful**: Built-in delays and error handling for API courtesy
+- **Storage Optimized**: Compact JSON storage for download records in VS Code global state
+
+### 🎯 Table Re-download Functionality
+#### **Parameter Preservation:**
+- **Exact Recreation**: Re-downloads use identical CLI commands as original export
+- **Setting Respect**: Honors original row limits and header inclusion choices
+- **Path Consistency**: Downloads to same local file path, overwriting previous version
+- **Progress Transparency**: Re-download progress shown in output channel with detailed logging
+
+#### **CLI Integration:**
+- **Same Export Function**: Re-downloads use identical `exportTable()` function as manual exports
+- **Error Handling**: Failed re-downloads show detailed error messages without affecting watch status
+- **Progress Tracking**: Real-time download progress with CLI output streaming
+- **Success Confirmation**: Completion notifications with file access options
+
+### 📦 Technical Implementation
+#### **New Architecture Components:**
+- **watch/DownloadsStore.ts**: 147 lines - Persistent storage with CRUD operations and project organization
+- **watch/TableWatcher.ts**: 247 lines - Background monitoring service with configurable intervals and auto-downloads
+- **Export Integration**: Modified `kbcCli.ts` with `addToDownloadsStore()` function for automatic watch list updates
+- **Settings Panel Enhancement**: Added Table Watcher section with validation and real-time feedback
+- **Extension Lifecycle**: Integrated watcher initialization, settings change handling, and cleanup
+
+#### **API Integration Points:**
+- **Table Detail API**: `GET /v2/storage/tables/{tableId}` for current `lastImportDate` retrieval
+- **Token Verification**: Uses existing project token for API authentication
+- **Error Response Handling**: Comprehensive error type detection and appropriate retry strategies
+- **Request Rate Management**: Built-in delays and sequential processing for API courtesy
+
+### 💡 User Workflow Enhancement
+#### **Export → Watch → Monitor Workflow:**
+1. **Export Table**: Use existing export functionality with row limits and headers
+2. **Automatic Watch**: Table automatically added to watch list with export parameters
+3. **Background Monitoring**: TableWatcher checks for changes at configured interval
+4. **Change Detection**: System detects when table data updates in Keboola
+5. **User Notification**: Alert with option to download or auto-download based on settings
+6. **Re-download**: Uses same parameters as original export for consistency
+
+#### **Manual Watch Management:**
+1. **Context Menu**: Right-click any table → "Watch This Table" (prompts to export first if not already downloaded)
+2. **Unwatch**: Right-click watched table → "Unwatch Table" to stop monitoring
+3. **Status Visibility**: Visual indicators showing which tables are being watched
+4. **Settings Control**: Global enable/disable and interval configuration
+
+### 🔧 Configuration Flexibility
+#### **Watch Settings Persistence:**
+- **Per-Project Storage**: Settings stored separately for each Keboola project
+- **Global State Integration**: Uses VS Code `context.globalState` for cross-session persistence  
+- **Setting Keys**: `keboola.watchEnabled`, `keboola.watchIntervalSec`, `keboola.autoDownload`
+- **Migration Safe**: New settings have sensible defaults for existing installations
+
+#### **Download Records Format:**
+```json
+{
+  "projectId": "Project Name",
+  "tableId": "in.c-main.customers", 
+  "localPath": "/workspace/kbc_project/in/c-main/customers.csv",
+  "lastImportDate": "2025-07-21T14:30:00+0200",
+  "limit": 2000,
+  "headers": true
+}
+```
+
+### 📈 Performance & Scalability
+#### **Efficient Operation:**
+- **Minimal Memory**: Download records stored as lightweight JSON objects
+- **Smart Caching**: Re-uses existing API connections and settings
+- **Batch Processing**: Sequential table checking with configurable delays
+- **Resource Cleanup**: Proper disposal of timers and event listeners
+
+#### **Scalability Considerations:**
+- **Large Projects**: Handles projects with hundreds of tables efficiently
+- **Multiple Projects**: Supports watching tables across different Keboola projects
+- **Long-term Usage**: Persistent storage designed for long-term accumulation of download records
+- **Extension Updates**: Download records preserved across extension updates
+
+### 🎯 Version 3.3.0 Impact
+This minor release introduces a comprehensive table monitoring system that transforms the extension from a one-time export tool to a continuous data synchronization solution. Users can now maintain up-to-date local copies of Keboola tables with automatic change detection and re-download capabilities, significantly improving development workflows and data pipeline management.
+
+**The extension now provides intelligent table watching with automatic re-downloads, ensuring your local data stays synchronized with Keboola!** 👁️🔄
+
+---
+
 ## [3.2.0] - 2025-07-21
 
 ### 🚀 MAJOR FEATURE: Project Name Root Node

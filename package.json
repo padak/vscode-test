@@ -2,7 +2,7 @@
 	"name": "keboola-data-engineering-booster",
 	"displayName": "Keboola Data Engineering Booster",
 	"description": "Comprehensive Keboola project management: explore storage, manage configurations across branches, and monitor job execution",
-	"version": "3.2.0",
+	"version": "3.3.0",
 	"publisher": "keboola",
 	"icon": "media/keboola_blue.png",
 	"engines": {
@@ -104,6 +104,16 @@
 				"command": "keboola.showJobsForConfiguration",
 				"title": "Show Jobs for This Configuration",
 				"icon": "$(history)"
+			},
+			{
+				"command": "keboola.watchTable",
+				"title": "Watch This Table",
+				"icon": "$(eye)"
+			},
+			{
+				"command": "keboola.unwatchTable",
+				"title": "Unwatch Table",
+				"icon": "$(eye-closed)"
 			}
 		],
 		"menus": {
@@ -166,6 +176,16 @@
 					"group": "inline"
 				},
 				{
+					"command": "keboola.watchTable",
+					"when": "view == keboolaExplorer && viewItem == table",
+					"group": "table-watch"
+				},
+				{
+					"command": "keboola.unwatchTable",
+					"when": "view == keboolaExplorer && viewItem == table",
+					"group": "table-watch"
+				},
+				{
 					"command": "keboola.refreshProject",
 					"when": "view == keboolaExplorer && viewItem == keboolaProject",
 					"group": "inline"
@@ -219,6 +239,14 @@
 				{
 					"command": "keboola.showJobsForConfiguration",
 					"title": "Keboola: Show Jobs for Configuration"
+				},
+				{
+					"command": "keboola.watchTable",
+					"title": "Keboola: Watch Table"
+				},
+				{
+					"command": "keboola.unwatchTable",
+					"title": "Keboola: Unwatch Table"
 				}
 			]
 		},

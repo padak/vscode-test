@@ -21,6 +21,10 @@ interface SettingsData {
     exportFolderName: string;
     useShortTableNames: boolean;
     lastUsed?: string;
+    // Table Watcher settings
+    watchEnabled: boolean;
+    watchIntervalSec: number;
+    autoDownload: boolean;
 }
 
 export class SettingsPanel {
@@ -137,6 +141,9 @@ export class SettingsPanel {
                         break;
                     case 'saveExportSettings':
                         await this.handleExportSettingsSave(message.exportRowLimit, message.includeHeaders, message.exportFolderName, message.useShortTableNames);
+                        break;
+                    case 'saveWatcherSettings':
+                        await this.handleWatcherSettingsSave(message.watchEnabled, message.watchIntervalSec, message.autoDownload);
                         break;
                     case 'savePreviewSettings':
                         await this.handlePreviewSettingsSave(message.previewRowLimit);
@@ -293,6 +300,48 @@ export class SettingsPanel {
         }
     }
 
+    private async handleWatcherSettingsSave(watchEnabled: boolean, watchIntervalSec: number, autoDownload: boolean): Promise<void> {
+        try {
+            // Validate watch interval
+            if (watchIntervalSec < 10 || watchIntervalSec > 3600) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Check interval must be between 10 and 3600 seconds',
+                    container: 'watcherMessageContainer'
+                });
+                return;
+            }
+
+            // Save watcher settings
+            await this.context.globalState.update('keboola.watchEnabled', watchEnabled);
+            await this.context.globalState.update('keboola.watchIntervalSec', watchIntervalSec);
+            await this.context.globalState.update('keboola.autoDownload', autoDownload);
+            
+            const enabledText = watchEnabled ? 'enabled' : 'disabled';
+            const autoText = autoDownload ? 'on' : 'off';
+            
+            // Show feedback
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `Table watcher settings saved! Watching: ${enabledText}, Interval: ${watchIntervalSec}s, Auto-download: ${autoText}`,
+                container: 'watcherMessageContainer'
+            });
+
+            // Trigger settings change notification to restart watcher with new settings
+            vscode.commands.executeCommand('keboola.internal.settingsChanged');
+
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to save watcher settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'watcherMessageContainer'
+            });
+        }
+    }
+
     private async handleTestConnection(): Promise<void> {
         console.log('HandleTestConnection called');
         try {
@@ -364,7 +413,11 @@ export class SettingsPanel {
             includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true,
             exportFolderName: this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project',
             useShortTableNames: this.context.globalState.get<boolean>('keboola.useShortTableNames') ?? false,
-            lastUsed: this.context.globalState.get<string>('keboola.lastUsedUrl')
+            lastUsed: this.context.globalState.get<string>('keboola.lastUsedUrl'),
+            // Table Watcher settings with defaults
+            watchEnabled: this.context.globalState.get<boolean>('keboola.watchEnabled') ?? true,
+            watchIntervalSec: this.context.globalState.get<number>('keboola.watchIntervalSec') || 20,
+            autoDownload: this.context.globalState.get<boolean>('keboola.autoDownload') ?? false
         };
     }
 
@@ -814,6 +867,52 @@ export class SettingsPanel {
                 </div>
             </div>
 
+            <!-- Table Watcher Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">👁️ Table Watcher</h2>
+                <div class="settings-container">
+                    <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <!-- Watch Enabled -->
+                        <div class="input-group">
+                            <label for="watchEnabled" class="input-label">
+                                <input type="checkbox" id="watchEnabled" ${settings.watchEnabled ? 'checked' : ''} style="margin-right: 8px;">
+                                Enable table watching
+                            </label>
+                            <div class="help-text">Monitor downloaded tables for changes</div>
+                        </div>
+
+                        <!-- Check Interval -->
+                        <div class="input-group">
+                            <label for="watchIntervalSec" class="input-label">Check interval (seconds)</label>
+                            <input type="number" id="watchIntervalSec" class="input-field" value="${settings.watchIntervalSec}" min="10" max="3600" step="1" placeholder="20">
+                            <div class="help-text">How often to check for updates</div>
+                        </div>
+
+                        <!-- Auto Download -->
+                        <div class="input-group">
+                            <label for="autoDownload" class="input-label">
+                                <input type="checkbox" id="autoDownload" ${settings.autoDownload ? 'checked' : ''} style="margin-right: 8px;">
+                                Auto-download changes
+                            </label>
+                            <div class="help-text">Automatically re-download when table changes</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button class="button" onclick="saveWatcherSettings()">💾 Save Table Watcher Settings</button>
+                        
+                        <!-- Message container for watcher settings -->
+                        <div id="watcherMessageContainer" style="margin-top: 15px;"></div>
+                    </div>
+                    
+                    <div style="margin-top: 16px; font-size: 12px; color: var(--vscode-descriptionForeground);">
+                        💡 <strong>Enable watching:</strong> Monitor tables for changes in Keboola<br>
+                        💡 <strong>Check interval:</strong> Shorter intervals = faster notifications, more API usage<br>
+                        💡 <strong>Auto-download:</strong> Off = show notification, On = automatically re-download
+                    </div>
+                </div>
+            </div>
+
             <script>
                 const vscode = acquireVsCodeApi();
                 
@@ -873,6 +972,24 @@ export class SettingsPanel {
                         includeHeaders: includeHeaders,
                         exportFolderName: exportFolderName,
                         useShortTableNames: useShortTableNames
+                    });
+                }
+                
+                function saveWatcherSettings() {
+                    const watchEnabled = document.getElementById('watchEnabled').checked;
+                    const watchIntervalSec = parseInt(document.getElementById('watchIntervalSec').value);
+                    const autoDownload = document.getElementById('autoDownload').checked;
+                    
+                    if (isNaN(watchIntervalSec) || watchIntervalSec < 10 || watchIntervalSec > 3600) {
+                        showMessage('error', 'Please enter a valid check interval (10-3600 seconds)', 'watcherMessageContainer');
+                        return;
+                    }
+                    
+                    vscode.postMessage({
+                        command: 'saveWatcherSettings',
+                        watchEnabled: watchEnabled,
+                        watchIntervalSec: watchIntervalSec,
+                        autoDownload: autoDownload
                     });
                 }
                 
