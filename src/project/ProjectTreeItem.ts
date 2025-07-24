@@ -5,13 +5,19 @@ export class ProjectTreeItem extends vscode.TreeItem {
     constructor(
         public readonly projectName: string,
         public readonly stackUrl: string,
-        private readonly keboolaTreeProvider: KeboolaTreeProvider
+        private readonly keboolaTreeProvider: KeboolaTreeProvider,
+        public readonly watchedTablesCount?: number
     ) {
         super(projectName, vscode.TreeItemCollapsibleState.Expanded);
         
         this.label = projectName ? `🛢  ${projectName}` : '🛢  Unknown Project';
         this.tooltip = `Keboola project (${stackUrl})`;
         this.contextValue = 'keboolaProject';
+        
+        // Add watched tables badge if there are any
+        if (watchedTablesCount && watchedTablesCount > 0) {
+            this.description = `👁 ${watchedTablesCount}`;
+        }
         
         // Add refresh command to the project node
         this.command = undefined;

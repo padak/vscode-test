@@ -18,6 +18,9 @@ export interface DownloadRecord {
 export class DownloadsStore {
     private static readonly STORAGE_KEY = 'kbc.downloads';
     
+    private _onDidChangeDownloads: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    readonly onDidChangeDownloads: vscode.Event<void> = this._onDidChangeDownloads.event;
+    
     constructor(private context: vscode.ExtensionContext) {}
 
     /**
@@ -61,6 +64,7 @@ export class DownloadsStore {
         }
 
         await this.context.globalState.update(DownloadsStore.STORAGE_KEY, records);
+        this._onDidChangeDownloads.fire();
     }
 
     /**
@@ -75,6 +79,7 @@ export class DownloadsStore {
         if (recordIndex >= 0) {
             records[recordIndex].lastImportDate = lastImportDate;
             await this.context.globalState.update(DownloadsStore.STORAGE_KEY, records);
+            this._onDidChangeDownloads.fire();
             return true;
         }
 
@@ -92,6 +97,7 @@ export class DownloadsStore {
 
         if (filteredRecords.length !== records.length) {
             await this.context.globalState.update(DownloadsStore.STORAGE_KEY, filteredRecords);
+            this._onDidChangeDownloads.fire();
             return true;
         }
 

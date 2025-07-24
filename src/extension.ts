@@ -11,6 +11,7 @@ import { JobDetailPanel } from './jobs/JobDetailPanel';
 import { JobsApi } from './jobs/jobsApi';
 import { DownloadsStore } from './watch/DownloadsStore';
 import { TableWatcher, WatchSettings } from './watch/TableWatcher';
+import { WatchedTablesTreeProvider } from './watch/WatchedTablesTreeProvider';
 
 let keboolaApi: KeboolaApi | undefined;
 let keboolaTreeProvider: KeboolaTreeProvider;
@@ -19,6 +20,7 @@ let treeView: vscode.TreeView<vscode.TreeItem>;
 let outputChannel: vscode.OutputChannel;
 let downloadsStore: DownloadsStore;
 let tableWatcher: TableWatcher;
+let watchedTablesTreeProvider: WatchedTablesTreeProvider;
 
 export function activate(context: vscode.ExtensionContext) {
     	console.log('Keboola Data Engineering Booster is now active!');
@@ -29,11 +31,14 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Initialize tree providers
     keboolaTreeProvider = new KeboolaTreeProvider();
-    projectTreeProvider = new ProjectTreeProvider(context, keboolaTreeProvider);
     
     // Initialize table watcher system
     downloadsStore = new DownloadsStore(context);
     tableWatcher = new TableWatcher(context, downloadsStore, outputChannel);
+    watchedTablesTreeProvider = new WatchedTablesTreeProvider(context, downloadsStore);
+    
+    // Initialize project tree provider with watched tables support
+    projectTreeProvider = new ProjectTreeProvider(context, keboolaTreeProvider, watchedTablesTreeProvider);
     
     // Create and register the tree view with the activity bar container
     treeView = vscode.window.createTreeView('keboolaExplorer', {
@@ -248,13 +253,24 @@ function registerCommands(context: vscode.ExtensionContext) {
     });
 
     // Unwatch Table command
-    const unwatchTableCmd = vscode.commands.registerCommand('keboola.unwatchTable', async (item?: TreeItem) => {
-        if (!item || !item.table) {
+    const unwatchTableCmd = vscode.commands.registerCommand('keboola.unwatchTable', async (item?: any) => {
+        let tableId: string | undefined;
+        
+        // Handle different item types
+        if (item?.table?.id) {
+            // Storage tree item
+            tableId = item.table.id;
+        } else if (item?.tableId) {
+            // Watched table item
+            tableId = item.tableId;
+        }
+        
+        if (!tableId) {
             vscode.window.showErrorMessage('No table selected');
             return;
         }
 
-        await handleUnwatchTable(item.table.id, context);
+        await handleUnwatchTable(tableId, context);
     });
 
     // Add all commands to subscriptions
@@ -685,6 +701,8 @@ async function handleUnwatchTable(tableId: string, context: vscode.ExtensionCont
         
         if (removed) {
             vscode.window.showInformationMessage(`Table "${getTableDisplayName(tableId)}" removed from watch list`);
+            // Refresh the project tree to update badge counts
+            projectTreeProvider.refresh();
         } else {
             vscode.window.showErrorMessage(`Failed to remove table "${getTableDisplayName(tableId)}" from watch list`);
         }

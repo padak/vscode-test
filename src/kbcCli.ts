@@ -608,6 +608,15 @@ export async function exportBucket(
 
                 outputChannel.appendLine(`✅ ${table.id} exported successfully`);
 
+                // Add to downloads store for table watching
+                try {
+                    await addToDownloadsStore(table.id, tablePath, exportSettings, context);
+                    outputChannel.appendLine(`👁 ${table.id} added to watch list`);
+                } catch (storeError) {
+                    outputChannel.appendLine(`⚠️ ${table.id} exported but failed to add to watch list: ${storeError instanceof Error ? storeError.message : 'Unknown error'}`);
+                    // Don't fail the export if store operation fails
+                }
+
                 // Export schema if requested
                 if (exportOptions.includeSchema) {
                     await exportTableSchema(table.id, options, bucketDir);

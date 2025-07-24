@@ -5,6 +5,217 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2025-07-21
+
+### 🐛 CRITICAL FIX: Bucket Download Tables Now Register with Watcher
+- **Fixed Bucket Export Bug**: Tables downloaded via "Export Bucket" now properly register with the table watcher system
+- **Watched Tables Registration**: Each table in an exported bucket automatically appears in the "👁 Watched Tables" section
+- **Complete Integration**: Bucket exports now work identically to individual table exports for watcher registration
+- **Live Monitoring**: Background table watcher now monitors all bucket-exported tables for changes
+
+### 🔧 Technical Fix Details
+#### **Root Cause**
+- `exportBucket()` function was missing `addToDownloadsStore()` calls for each exported table
+- Individual table exports correctly registered with watcher, but bucket exports did not
+- Tables were downloaded but not monitored, missing from watched tables UI
+
+#### **Solution Implementation**
+- **Enhanced Export Loop**: Added `addToDownloadsStore()` call after each successful table export in bucket download
+- **Error Handling**: Graceful handling of store registration failures without breaking the export process
+- **User Feedback**: Clear logging shows "👁 table_name added to watch list" for each registered table
+- **Non-Breaking**: Export continues even if individual table registration fails
+
+#### **Export Workflow Now Complete**
+```bash
+✅ Export Bucket → Download all tables → Register each with watcher → Appear in watched tables UI
+```
+
+### 📊 Validation & Testing
+#### **Before Fix**
+- ❌ Export bucket → Tables downloaded to files but NOT in watched tables section
+- ❌ Project badge shows 0 watched tables despite exported bucket
+- ❌ No background monitoring for bucket-exported tables
+
+#### **After Fix**
+- ✅ Export bucket → All tables appear in "👁 Watched Tables" section automatically
+- ✅ Project badge shows correct count including bucket-exported tables
+- ✅ Background watcher monitors all bucket tables for changes
+- ✅ Individual table exports still work as before (no regression)
+
+### 🎯 User Impact
+#### **Bucket Export Experience Enhanced**
+1. **Export any bucket** → All tables automatically tracked in watched tables UI
+2. **Visual confirmation** → Project badge increments by number of tables in bucket
+3. **Live monitoring** → Background watcher checks all bucket tables for updates
+4. **Consistent behavior** → Bucket exports now work identically to individual table exports
+
+#### **Table Management Simplified**
+- **No Manual Setup**: Export bucket once, all tables automatically monitored
+- **Bulk Watching**: Single bucket export sets up monitoring for all tables
+- **Unified Interface**: All exported tables (individual or bucket) appear in same watched tables section
+- **Easy Unwatching**: Right-click any bucket-exported table to unwatch individually
+
+### 📦 Technical Specifications
+- **Package Size**: 410.73KB (118 files, +1 bug fix enhancement)
+- **Performance**: Negligible impact - registration happens after each table export
+- **Backward Compatibility**: All existing functionality preserved
+- **Error Resilience**: Export succeeds even if individual table registration fails
+
+### 💡 Development Notes
+#### **Code Changes**
+- **File Modified**: `src/kbcCli.ts` - Enhanced `exportBucket()` function
+- **Lines Added**: 7 lines for table watcher registration with error handling
+- **Integration Point**: After successful table download, before schema export
+- **Logging Enhanced**: Clear feedback for successful/failed table registration
+
+#### **Error Handling**
+```typescript
+try {
+    await addToDownloadsStore(table.id, tablePath, exportSettings, context);
+    outputChannel.appendLine(`👁 ${table.id} added to watch list`);
+} catch (storeError) {
+    outputChannel.appendLine(`⚠️ ${table.id} exported but failed to add to watch list`);
+    // Export continues successfully
+}
+```
+
+### 🎯 Version 3.3.2 Impact
+This critical patch fix ensures bucket exports work consistently with the table watching system introduced in v3.3.0 and the watched tables UI added in v3.3.1. Users can now export entire buckets and have all tables automatically appear in the watched tables section with proper background monitoring.
+
+**Bucket downloads now fully integrate with the table watcher - no more missing tables in the watched list!** 🐛→✅👁️
+
+---
+
+## [3.3.1] - 2025-07-21
+
+### 🚀 MAJOR ENHANCEMENT: Visible Watched Tables Section & Unwatch Controls
+- **👁️ NEW: Watched Tables Tree Section** - Visual section under project node displaying all watched tables with detailed tooltips
+- **📊 Project Badge** - Project node shows "👁 N" badge indicating number of watched tables for quick overview
+- **🗑️ Enhanced Unwatch Controls** - Context menu "Unwatch Table" available on both Storage and Watched Tables sections
+- **🔗 Direct Navigation** - Click watched tables to open same Table Detail Panel as Storage tree items
+- **⚡ Live Updates** - Watched tables list refreshes automatically when tables are added/removed from watch list
+
+### ✨ Added - Watched Tables UI Infrastructure
+- **WatchedTablesTreeProvider.ts**: New tree provider for displaying watched tables with rich tooltips and navigation
+- **WatchedTableTreeItem**: Table items showing full table ID with tooltips containing local path, last import date, row limits, and headers
+- **WatchedTablesRootItem**: Root section showing "👁 Watched Tables" with count description and eye icon
+- **DownloadsStore Events**: Added `onDidChangeDownloads` event emission for automatic UI updates
+- **Project Tree Integration**: Seamless integration of watched tables under project nodes without affecting existing tree structure
+
+### 🔧 Enhanced User Experience
+#### **Visual Watched Tables Display:**
+- **Section Label**: "👁 Watched Tables" with count description (e.g., "5 tables")
+- **Table Items**: Show complete table ID (e.g., "in.c-bucket.customers") with stage prefix included
+- **Rich Tooltips**: Display local file path, last import date, row limit, and header settings
+- **Table Icons**: Same table icons as Storage tree for visual consistency
+- **Direct Click**: Opens existing Table Detail Panel with all preview/export functionality
+
+#### **Project Node Enhancements:**
+- **Watch Badge**: Shows "👁 N" in project description when tables are being watched
+- **Live Count**: Badge updates immediately when tables are added/removed from watch list
+- **Clear Indicator**: Easy visual confirmation of how many tables are actively monitored
+
+### 🗑️ Improved Unwatch Controls
+#### **Context Menu Integration:**
+- **Storage Tables**: "Watch Table" and "Unwatch Table" options on all table nodes
+- **Watched Tables**: "Unwatch Table" option for direct removal from watch list
+- **Smart Command**: Single `keboola.unwatchTable` command handles both Storage and Watched table items
+- **Immediate Feedback**: Success/error notifications with automatic tree refresh
+
+#### **Unwatch Workflow:**
+1. **Right-click any table** (Storage or Watched Tables section)
+2. **Select "Unwatch Table"** from context menu
+3. **Automatic removal** from downloads store and watch list
+4. **Tree refresh** updates both badge count and watched tables list
+5. **Stop monitoring** table no longer checked for changes
+
+### 📱 Tree Navigation & Structure
+#### **Enhanced Project Structure:**
+```
+🛢  Project Name                     👁 2
+├─ ✅ Connected to Keboola API
+├─ 👁 Watched Tables                 2 tables
+│  ├─ in.c-main.customers
+│  └─ out.c-results.summary  
+├─ 📊 Storage
+│  ├─ Input (in)
+│  └─ Output (out)
+├─ ⚙️ Configurations
+└─ 📈 Jobs
+```
+
+#### **Navigation Features:**
+- **Same Detail Panel**: Watched tables open identical Table Detail Panel as Storage items
+- **Context Preservation**: All existing preview/export functionality available from watched tables
+- **Tree Delegation**: Proper delegation to existing KeboolaTreeProvider for Storage/Configurations/Jobs
+- **Performance**: Efficient tree updates with event-driven refresh system
+
+### 🔧 Technical Implementation
+#### **New Architecture Components:**
+- **WatchedTablesTreeProvider.ts**: 87 lines - Complete tree provider with event handling and tooltip generation
+- **Enhanced DownloadsStore**: Added event emission (`onDidChangeDownloads`) for automatic UI updates
+- **Project Tree Integration**: Modified ProjectTreeProvider to inject watched tables without breaking existing structure
+- **Command Enhancement**: Updated `keboola.unwatchTable` to handle both Storage and Watched table item types
+
+#### **Event-Driven Updates:**
+- **Downloads Store Events**: Automatic `_onDidChangeDownloads.fire()` on add/update/remove operations
+- **Tree Provider Listening**: WatchedTablesTreeProvider listens for downloads changes and refreshes automatically
+- **Project Badge Updates**: Project tree refreshes to update badge counts when watch list changes
+- **Zero Manual Refresh**: All UI updates happen automatically without user intervention
+
+### 🎯 User Workflow Enhancement
+#### **Watch Management Workflow:**
+1. **Export Table** → Automatically appears in "👁 Watched Tables" section
+2. **Visual Confirmation** → Project badge shows watch count, watched tables list updates
+3. **Direct Access** → Click watched table to view details, same as Storage tree
+4. **Easy Removal** → Right-click watched table → "Unwatch Table" → automatic cleanup
+5. **Live Monitoring** → Background watcher continues monitoring with visual feedback
+
+#### **Multi-Table Management:**
+- **Bulk Watching**: Export multiple tables, all appear in watched list automatically
+- **Selective Unwatching**: Remove individual tables from watch list without affecting others
+- **Status Overview**: Project badge provides quick count of actively monitored tables
+- **Organization**: Watched tables sorted by table ID for easy navigation
+
+### 💡 Integration Benefits
+#### **Unified Experience:**
+- **Single Interface**: Watch management integrated seamlessly with existing Storage/Configurations/Jobs
+- **Consistent Navigation**: Same table detail experience whether accessed from Storage or Watched Tables
+- **Visual Feedback**: Clear indicators of watch status and counts throughout the interface
+- **No Disruption**: All existing functionality preserved, watched tables are pure enhancement
+
+#### **Development Efficiency:**
+- **Quick Access**: Find and open watched tables without navigating through Storage tree hierarchy
+- **Watch Overview**: Instant visibility into which tables are being monitored
+- **Easy Management**: Add/remove tables from watch list with simple context menu actions
+- **Status Awareness**: Always know how many tables are actively monitored via project badge
+
+### 📦 Technical Specifications
+#### **Package Details:**
+- **Extension Size**: 408.52KB (118 files, +3 new watch UI files)
+- **No Breaking Changes**: All existing Storage, Configurations, Jobs, and watcher logic preserved
+- **Event Architecture**: Efficient event-driven UI updates minimize unnecessary refreshes
+- **Memory Efficient**: Lightweight tree items with on-demand tooltip generation
+
+#### **File Structure:**
+```
+src/watch/
+├── DownloadsStore.ts          # Enhanced with event emission
+├── TableWatcher.ts            # Unchanged - background monitoring
+└── WatchedTablesTreeProvider.ts  # NEW - UI tree provider
+
+src/project/
+├── ProjectTreeItem.ts         # Enhanced with watch badge
+└── ProjectTreeProvider.ts     # Enhanced with watched tables integration
+```
+
+### 🎯 Version 3.3.1 Impact
+This patch release provides essential UI visibility for the table watching system introduced in v3.3.0. Users now have complete visual control over their watched tables with intuitive management controls, project-level status indicators, and seamless navigation. The watched tables section transforms the monitoring feature from a background service to a first-class UI component with full integration into the existing tree structure.
+
+**Table watching is now fully visible and manageable through an intuitive UI with project badges and direct unwatch controls!** 👁️🗑️📊
+
+---
+
 ## [3.3.0] - 2025-07-21
 
 ### 🚀 MAJOR FEATURE: Automatic Table Re-check & Watch System

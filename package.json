@@ -2,7 +2,7 @@
 	"name": "keboola-data-engineering-booster",
 	"displayName": "Keboola Data Engineering Booster",
 	"description": "Comprehensive Keboola project management: explore storage, manage configurations across branches, and monitor job execution",
-	"version": "3.3.0",
+	"version": "3.3.2",
 	"publisher": "keboola",
 	"icon": "media/keboola_blue.png",
 	"engines": {
@@ -184,6 +184,11 @@
 					"command": "keboola.unwatchTable",
 					"when": "view == keboolaExplorer && viewItem == table",
 					"group": "table-watch"
+				},
+				{
+					"command": "keboola.unwatchTable",
+					"when": "view == keboolaExplorer && viewItem == watchedTable",
+					"group": "inline"
 				},
 				{
 					"command": "keboola.refreshProject",
