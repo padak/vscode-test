@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { KeboolaApi, KeboolaApiError } from './keboolaApi';
 import { KeboolaTreeProvider, TreeItem } from './KeboolaTreeProvider';
+import { ProjectTreeProvider } from './project/ProjectTreeProvider';
 import { TableDetailPanel } from './TableDetailPanel';
 import { BucketDetailPanel } from './BucketDetailPanel';
 import { StageDetailPanel } from './StageDetailPanel';
@@ -10,8 +11,9 @@ import { JobDetailPanel } from './jobs/JobDetailPanel';
 import { JobsApi } from './jobs/jobsApi';
 
 let keboolaApi: KeboolaApi | undefined;
-let treeProvider: KeboolaTreeProvider;
-let treeView: vscode.TreeView<TreeItem>;
+let keboolaTreeProvider: KeboolaTreeProvider;
+let projectTreeProvider: ProjectTreeProvider;
+let treeView: vscode.TreeView<vscode.TreeItem>;
 let outputChannel: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -21,12 +23,13 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Keboola Storage Explorer');
     context.subscriptions.push(outputChannel);
 
-    // Initialize tree provider
-    treeProvider = new KeboolaTreeProvider();
+    // Initialize tree providers
+    keboolaTreeProvider = new KeboolaTreeProvider();
+    projectTreeProvider = new ProjectTreeProvider(context, keboolaTreeProvider);
     
     // Create and register the tree view with the activity bar container
     treeView = vscode.window.createTreeView('keboolaExplorer', {
-        treeDataProvider: treeProvider,
+        treeDataProvider: projectTreeProvider,
         showCollapseAll: true
     });
 
@@ -61,10 +64,35 @@ function initializeFromSettings(context: vscode.ExtensionContext) {
             token: settings.token 
         });
         // Pass the same settings to tree provider so Jobs API uses consistent config
-        treeProvider.setKeboolaApi(keboolaApi, {
+        keboolaTreeProvider.setKeboolaApi(keboolaApi, {
             apiUrl: settings.apiUrl,
             token: settings.token
         });
+        
+        // Fetch and cache project name
+        fetchProjectName(context, keboolaApi);
+    }
+}
+
+async function fetchProjectName(context: vscode.ExtensionContext, api: KeboolaApi): Promise<void> {
+    try {
+        const result = await api.testConnection();
+        if (result.success && result.tokenInfo?.owner?.name) {
+            const projectName = result.tokenInfo.owner.name;
+            await context.globalState.update('keboola.projectName', projectName);
+            console.log(`[Extension] Project name cached: ${projectName}`);
+            
+            // Refresh the project tree to show the updated name
+            projectTreeProvider.refresh();
+        } else {
+            console.log('[Extension] Could not fetch project name, using fallback');
+            await context.globalState.update('keboola.projectName', 'Unknown Project');
+            projectTreeProvider.refresh();
+        }
+    } catch (error) {
+        console.error('[Extension] Failed to fetch project name:', error);
+        await context.globalState.update('keboola.projectName', 'Unknown Project');
+        projectTreeProvider.refresh();
     }
 }
 
@@ -88,7 +116,14 @@ function registerCommands(context: vscode.ExtensionContext) {
 
     // Refresh configurations only
     const refreshConfigurationsCmd = vscode.commands.registerCommand('keboola.refreshConfigurations', () => {
-        treeProvider.refreshConfigurations();
+        keboolaTreeProvider.refreshConfigurations();
+    });
+
+    // Refresh project name and tree
+    const refreshProjectCmd = vscode.commands.registerCommand('keboola.refreshProject', async () => {
+        if (keboolaApi) {
+            await fetchProjectName(context, keboolaApi);
+        }
     });
 
     // Set row limit (now opens settings panel)
@@ -148,7 +183,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
     // Refresh jobs only
     const refreshJobsCmd = vscode.commands.registerCommand('keboola.refreshJobs', () => {
-        treeProvider.refreshJobs();
+        keboolaTreeProvider.refreshJobs();
     });
 
     // Show job details
@@ -185,7 +220,8 @@ function registerCommands(context: vscode.ExtensionContext) {
         showConfigurationCmd,
         refreshJobsCmd,
         showJobCmd,
-        showJobsForConfigCmd
+        showJobsForConfigCmd,
+        refreshProjectCmd
     );
 }
 
@@ -374,7 +410,7 @@ async function showBranchDetails(branchId: string, context: vscode.ExtensionCont
                 branchDetail,
                 context.extensionUri,
                 keboolaApi,
-                treeProvider
+                keboolaTreeProvider
             );
         });
     } catch (error) {
@@ -438,7 +474,7 @@ async function showConfigurationDetails(componentId: string, configurationId: st
                 configDetail,
                 context.extensionUri,
                 keboolaApi,
-                treeProvider
+                keboolaTreeProvider
             );
         });
     } catch (error) {
@@ -515,7 +551,7 @@ async function showJobsForConfiguration(componentId: string, configurationId: st
             return;
         }
 
-        const jobs = await treeProvider.getJobsForConfiguration(componentId, configurationId, branchId);
+        const jobs = await keboolaTreeProvider.getJobsForConfiguration(componentId, configurationId, branchId);
 
         if (jobs.length === 0) {
             vscode.window.showInformationMessage(`No jobs found for configuration ${componentId}/${configurationId}`);
@@ -523,7 +559,7 @@ async function showJobsForConfiguration(componentId: string, configurationId: st
         }
 
         // Show a quick pick with recent jobs
-        const jobItems = jobs.map(job => ({
+        const jobItems = jobs.map((job: any) => ({
             label: `${job.status} • ${job.id}`,
             description: `${job.createdTime} • Duration: ${job.durationSeconds ? `${job.durationSeconds}s` : 'N/A'}`,
             detail: job.error?.message || job.result?.message || '',

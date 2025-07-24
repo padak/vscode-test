@@ -5,6 +5,89 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2025-07-21
+
+### 🚀 MAJOR FEATURE: Project Name Root Node
+- **🆕 NEW: Project Root Node** - Tree now displays project name as root wrapper around Storage, Configurations, and Jobs
+- **🏷️ Project Name Display**: Shows actual project name from token verification (`owner.name` from `/v2/storage/tokens/verify`)
+- **🔄 Project Refresh Command**: New "Refresh Project" command and button to update project name and refresh all underlying trees
+- **📊 Project Context**: Project node shows tooltip with stack URL and uses database icon for clear identification
+- **⚡ Token Verification on Startup**: Automatically fetches project name when extension initializes or settings change
+
+### ✨ Added - Project Wrapper Architecture
+- **ProjectTreeItem.ts**: New TreeItem class for project root node with database icon and proper labeling
+- **ProjectTreeProvider.ts**: New TreeDataProvider wrapping existing KeboolaTreeProvider for hierarchical display
+- **Project Name Caching**: Stores project name in `context.globalState['keboola.projectName']` with "Unknown Project" fallback
+- **Auto-fetch Project Name**: Calls token verification API on extension activation and settings changes
+- **Refresh Project Command**: `keboola.refreshProject` re-fetches project name and refreshes entire tree
+- **Context Menu Integration**: Refresh icon appears on project node for easy project name updates
+
+### 🔧 Enhanced Tree Structure
+#### **Before (Flat):**
+```
+🔄 Keboola Platform
+├─ ✅ Connected to Keboola API
+├─ 📊 Storage
+├─ ⚙️ Configurations  
+└─ 📈 Jobs
+```
+
+#### **After (Project Wrapped):**
+```
+🔄 Keboola Platform
+└─ 🛢  Project Name
+   ├─ ✅ Connected to Keboola API
+   ├─ 📊 Storage
+   ├─ ⚙️ Configurations
+   └─ 📈 Jobs
+```
+
+### 🐛 CRITICAL FIX: Storage Section Visibility
+- **FIXED: Missing Storage Section** - Resolved timing issue where Storage section didn't appear in project tree
+- **Root Cause**: `getChildren()` called before `loadData()` completed, Storage only showed if `tables.length > 0`
+- **Solution**: Added `await this.loadData()` to ensure data loaded before tree rendering
+- **Always Show Storage**: Storage section now appears when API connected, regardless of table count
+- **Enhanced Data Loading**: Proper async/await pattern ensures reliable tree display
+
+### 🔄 Enhanced API Integration
+- **Token Verification**: Uses existing `testConnection()` method to fetch project owner name
+- **Graceful Fallback**: "Unknown Project" displayed if API call fails or no project name available
+- **Settings Integration**: Project name fetched automatically when API settings configured
+- **No Breaking Changes**: All existing Storage, Configurations, and Jobs functionality preserved
+
+### 📦 Technical Implementation
+- **ProjectTreeProvider**: Main tree provider delegates to existing KeboolaTreeProvider for child nodes
+- **Context State Management**: Project name persisted across sessions in VS Code global state
+- **Command Integration**: New refresh command registered with Command Palette and context menus
+- **Type Safety**: Proper TypeScript integration with existing tree provider interfaces
+- **Extension Lifecycle**: Project name fetching integrated into activation and settings workflows
+
+### 🎯 User Experience Improvements
+- **Project Context**: Clear visual indication of which Keboola project is currently connected
+- **Unified Navigation**: All platform features organized under project name for better hierarchy
+- **Quick Refresh**: Easy project name updates when switching between different API tokens
+- **Professional Display**: Database icon and tooltip provide clear project identification
+- **Consistent Branding**: Project wrapper maintains existing UI/UX patterns and styling
+
+### 🔧 Integration Details
+- **Extension.ts Updates**: Integrated ProjectTreeProvider as main tree provider, added project name fetching
+- **Package.json Changes**: Registered `keboola.refreshProject` command and context menu items
+- **Backward Compatibility**: Zero functional changes to existing Storage, Configurations, or Jobs features
+- **Settings Preserved**: All existing API connection and configuration settings work unchanged
+- **Command Preservation**: All existing commands and functionality fully preserved
+
+### 💡 Technical Benefits
+- **Hierarchical Organization**: Clear project-level organization improves navigation and context
+- **Project Identification**: Users always know which Keboola project they're working with
+- **Future-Proof Design**: Foundation for potential multi-project support in future versions
+- **Clean Separation**: Project wrapper doesn't interfere with existing provider logic
+- **Performance Optimized**: Minimal overhead with efficient delegation patterns
+
+### 🎯 Version 3.2.0 Impact
+This minor release enhances the extension's user experience by providing clear project context and resolving a critical tree display issue. The project name wrapper creates better hierarchical organization while maintaining full backward compatibility with existing workflows. The Storage section visibility fix ensures reliable tree display for all connection scenarios.
+
+**The extension now clearly displays your project name and ensures Storage section is always visible!** 🛢️✅
+
 ## [3.1.4] - 2025-07-21
 
 ### 🐛 CRITICAL FIX: Extension Icon Display

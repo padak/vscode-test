@@ -115,6 +115,11 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 
     async getChildren(element?: TreeItem): Promise<TreeItem[]> {
         if (!element) {
+            // Ensure data is loaded first
+            if (this.keboolaApi && this.tables.length === 0) {
+                await this.loadData();
+            }
+            
             // Root level: show Storage node and connection status
             const items: TreeItem[] = [];
             
@@ -129,18 +134,16 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             items.push(statusItem);
             
             if (this.isApiConnected) {
-                // Add Storage root node
-                if (this.tables.length > 0) {
-                    const storageItem = new TreeItem(
-                        'Storage',
-                        vscode.TreeItemCollapsibleState.Expanded,
-                        'storage'
-                    );
-                    storageItem.description = `${this.tables.length} tables`;
-                    storageItem.tooltip = 'Keboola Storage tables and buckets';
-                    storageItem.iconPath = new vscode.ThemeIcon('database');
-                    items.push(storageItem);
-                }
+                // Always add Storage root node when connected (even if no tables)
+                const storageItem = new TreeItem(
+                    'Storage',
+                    vscode.TreeItemCollapsibleState.Expanded,
+                    'storage'
+                );
+                storageItem.description = `${this.tables.length} tables`;
+                storageItem.tooltip = 'Keboola Storage tables and buckets';
+                storageItem.iconPath = new vscode.ThemeIcon('database');
+                items.push(storageItem);
 
                 // Add Configurations root node
                 const configurationsItem = new TreeItem(
