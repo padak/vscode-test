@@ -6,7 +6,7 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ---
 
-## 🚀 **Key Features (Version 3.1.3)**
+## 🚀 **Key Features (Version 3.3.3)**
 
 ### 📊 **Storage Explorer** *(Preserved from v2.x)*
 - **Browse Your Data Structure**: See all your stages (in, out), buckets, and tables in a tree view
@@ -39,8 +39,16 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Multi-Region Support**: Connect to any Keboola region (US, EU, Asia-Pacific)
 - **Secure Authentication**: Store your API tokens securely
 - **Connection Testing**: Verify your connection with one click
-- **Multiple Projects**: Switch between different Keboola projects easily
+- **API Status Visibility**: Connection status prominently displayed at the top level
+- **Single Project Focus**: Streamlined single-project architecture for simplified management
 - **Unified API Client**: Same connection settings work for both Storage and Configurations
+
+### 🌳 **Enhanced Tree Structure** *(Version 3.3.3)*
+- **API Status at Top Level**: Connection status appears as the very first item for immediate awareness
+- **Two Root Elements**: Clean hierarchy with API Status and Project Node as separate root items
+- **Single-Project Architecture**: Streamlined to single-project focus, removing multi-project complexity
+- **Professional Layout**: Enterprise-grade tree organization with clear purpose separation
+- **Immediate Feedback**: API connection status visible without any interaction or expansion
 
 ### 📁 **Smart Data Export** *(Enhanced)*
 - **Workspace Integration**: Export data directly into your VS Code workspace
@@ -104,11 +112,13 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 #### **Activity Bar Integration**
 - Dedicated Keboola icon in VS Code's side panel
+- **API Status at Top Level**: Connection status appears as the very first item for immediate awareness
 - **Triple-Section View**: Storage, Configurations, and Jobs in the same unified interface
 - Always accessible from anywhere in your project
 - **Unified Navigation**: Switch seamlessly between data, configuration, and job monitoring
 
 #### **Smart Panels**
+- **API Status Panel**: Global connection status indicator at the top level
 - **Detail Panels**: Rich information displays for tables, buckets, stages, branches, configurations, and jobs
 - **Settings Panel**: Easy configuration management
 - **Automatic Updates**: Refresh data with dedicated refresh commands
@@ -303,9 +313,10 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 1. **Install**: Get the extension from VS Code marketplace
 2. **Configure**: Open settings and add your Keboola connection details
 3. **Test**: Use the "Test Connection" button to verify setup
-4. **Explore Storage**: Browse your data in the Storage section
-5. **Explore Configurations**: Check out the Configurations section below Storage
-6. **NEW: Monitor Jobs**: Track job execution in the Jobs section for real-time monitoring
+4. **Check API Status**: See connection status at the top of the tree view
+5. **Explore Storage**: Browse your data in the Storage section
+6. **Explore Configurations**: Check out the Configurations section below Storage
+7. **NEW: Monitor Jobs**: Track job execution in the Jobs section for real-time monitoring
 
 ### **Storage Workflow**
 1. **Browse**: Navigate through stages, buckets, and tables
