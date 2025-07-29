@@ -8,6 +8,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<vscode.TreeI
     readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
     private projectTreeItem: ProjectTreeItem | undefined;
+    private apiStatusItem: vscode.TreeItem | undefined;
 
     constructor(
         private context: vscode.ExtensionContext,
@@ -25,14 +26,35 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<vscode.TreeI
 
     async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
         if (!element) {
-            // Root level - return the single project node
+            // Root level - return API Status and Project Node
+            const items: vscode.TreeItem[] = [];
+            
+            // Add API Status as the first item
+            const isApiConnected = this.keboolaTreeProvider.getApiConnectionStatus();
+            this.apiStatusItem = new vscode.TreeItem(
+                isApiConnected ? '✅ Connected to Keboola API' : '❌ No API connection',
+                vscode.TreeItemCollapsibleState.None
+            );
+            this.apiStatusItem.contextValue = 'api-status';
+            this.apiStatusItem.description = isApiConnected ? 'API connected' : 'Configure in Settings';
+            this.apiStatusItem.iconPath = new vscode.ThemeIcon(isApiConnected ? 'check' : 'error');
+            items.push(this.apiStatusItem);
+            
+            // Add Project Node as the second item
             const projectName = this.context.globalState.get<string>('keboola.projectName') || 'Unknown Project';
             const stackUrl = this.context.globalState.get<string>('keboola.apiUrl') || '';
             const watchedTablesCount = this.watchedTablesTreeProvider.getWatchedCount(projectName);
             
             this.projectTreeItem = new ProjectTreeItem(projectName, stackUrl, this.keboolaTreeProvider, watchedTablesCount);
-            return [this.projectTreeItem];
+            items.push(this.projectTreeItem);
+            
+            return items;
         } 
+        
+        if (element.contextValue === 'api-status') {
+            // API Status has no children
+            return [];
+        }
         
         if (element instanceof ProjectTreeItem) {
             // Project node children - return Storage, Configurations, Jobs, and Watched Tables
@@ -75,5 +97,12 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<vscode.TreeI
      */
     getProjectItem(): ProjectTreeItem | undefined {
         return this.projectTreeItem;
+    }
+
+    /**
+     * Get the API status item for refresh commands
+     */
+    getApiStatusItem(): vscode.TreeItem | undefined {
+        return this.apiStatusItem;
     }
 } 

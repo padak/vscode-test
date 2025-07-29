@@ -120,18 +120,8 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 await this.loadData();
             }
             
-            // Root level: show Storage node and connection status
+            // Root level: show Storage, Configurations, and Jobs nodes when connected
             const items: TreeItem[] = [];
-            
-            // Add connection status
-            const statusItem = new TreeItem(
-                this.isApiConnected ? '✅ Connected to Keboola API' : '❌ No API connection',
-                vscode.TreeItemCollapsibleState.None,
-                'status'
-            );
-            statusItem.description = this.isApiConnected ? 'API connected' : 'Configure in Settings';
-            statusItem.iconPath = new vscode.ThemeIcon(this.isApiConnected ? 'check' : 'error');
-            items.push(statusItem);
             
             if (this.isApiConnected) {
                 // Always add Storage root node when connected (even if no tables)
@@ -401,6 +391,11 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     // Public method to get table by ID (used by commands)
     getTableById(tableId: string): KeboolaTable | undefined {
         return this.tables.find(table => table.id === tableId);
+    }
+
+    // Public method to check API connection status
+    getApiConnectionStatus(): boolean {
+        return this.isApiConnected;
     }
 }
 
