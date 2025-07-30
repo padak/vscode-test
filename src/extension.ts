@@ -12,6 +12,11 @@ import { JobsApi } from './jobs/jobsApi';
 import { DownloadsStore } from './watch/DownloadsStore';
 import { TableWatcher, WatchSettings } from './watch/TableWatcher';
 import { WatchedTablesTreeProvider } from './watch/WatchedTablesTreeProvider';
+import { AgentsTreeProvider, registerAgentCommands } from './agents/AgentsTreeProvider';
+import { AgentStore } from './agents/AgentStore';
+import { AgentRuntime } from './agents/AgentRuntime';
+import { CreateAgentPanel } from './agents/webviews/CreateAgentPanel';
+import { AgentDetailPanel } from './agents/webviews/AgentDetailPanel';
 
 let keboolaApi: KeboolaApi | undefined;
 let keboolaTreeProvider: KeboolaTreeProvider;
@@ -21,6 +26,9 @@ let outputChannel: vscode.OutputChannel;
 let downloadsStore: DownloadsStore;
 let tableWatcher: TableWatcher;
 let watchedTablesTreeProvider: WatchedTablesTreeProvider;
+let agentsTreeProvider: AgentsTreeProvider;
+let agentStore: AgentStore;
+let agentRuntime: AgentRuntime;
 
 export function activate(context: vscode.ExtensionContext) {
     	console.log('Keboola Data Engineering Booster is now active!');
@@ -48,6 +56,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Add tree view to context subscriptions
     context.subscriptions.push(treeView);
+
+    // Initialize agents system
+    initializeAgentsSystem(context);
 
     // Load stored configuration and initialize API
     initializeFromSettings(context);
@@ -110,6 +121,33 @@ async function fetchProjectName(context: vscode.ExtensionContext, api: KeboolaAp
         await context.globalState.update('keboola.projectName', 'Unknown Project');
         projectTreeProvider.refresh();
     }
+}
+
+function initializeAgentsSystem(context: vscode.ExtensionContext) {
+    // Initialize agent store and runtime
+    agentStore = new AgentStore(context);
+    agentRuntime = new AgentRuntime(agentStore, {
+        onStateChange: (from: string, to: string) => {
+            console.log(`Agent state changed from ${from} to ${to}`);
+        }
+    });
+    
+    // Initialize agents tree provider
+    agentsTreeProvider = new AgentsTreeProvider(agentStore, agentRuntime);
+    
+    // Create and register the agents tree view
+    const agentsTreeView = vscode.window.createTreeView('keboolaAgents', {
+        treeDataProvider: agentsTreeProvider,
+        showCollapseAll: true
+    });
+    
+    // Add agents tree view to context subscriptions
+    context.subscriptions.push(agentsTreeView);
+    
+    // Register agent commands
+    registerAgentCommands(context, agentRuntime, agentStore);
+    
+    console.log('Agents system initialized successfully');
 }
 
 function initializeTableWatcher(context: vscode.ExtensionContext) {
@@ -273,6 +311,35 @@ function registerCommands(context: vscode.ExtensionContext) {
         await handleUnwatchTable(tableId, context);
     });
 
+    // Create Agent command
+    const createAgentCmd = vscode.commands.registerCommand('keboola.agents.create', async () => {
+        if (!agentStore || !agentRuntime) {
+            vscode.window.showErrorMessage('Agents system not initialized');
+            return;
+        }
+        
+        try {
+            CreateAgentPanel.createOrShow(context.extensionUri, context, agentStore, agentRuntime);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to open agent creation panel: ${error}`);
+        }
+    });
+
+    // Create Demo Agent command (for testing)
+    const createDemoAgentCmd = vscode.commands.registerCommand('keboola.agents.createDemo', async () => {
+        if (!agentStore || !agentRuntime) {
+            vscode.window.showErrorMessage('Agents system not initialized');
+            return;
+        }
+        
+        try {
+            const agentId = await agentStore.createDemoAgent();
+            vscode.window.showInformationMessage(`Demo agent created: ${agentId}`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to create demo agent: ${error}`);
+        }
+    });
+
     // Add all commands to subscriptions
     context.subscriptions.push(
         settingsCmd,
@@ -291,7 +358,9 @@ function registerCommands(context: vscode.ExtensionContext) {
         refreshProjectCmd,
         settingsChangedCmd,
         watchTableCmd,
-        unwatchTableCmd
+        unwatchTableCmd,
+        createAgentCmd,
+        createDemoAgentCmd
     );
 }
 

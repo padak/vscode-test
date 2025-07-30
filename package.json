@@ -2,7 +2,7 @@
 	"name": "keboola-data-engineering-booster",
 	"displayName": "Keboola Data Engineering Booster",
 	"description": "Comprehensive Keboola project management: explore storage, manage configurations across branches, and monitor job execution",
-	"version": "3.3.3",
+	"version": "4.0.0",
 	"publisher": "keboola",
 	"icon": "media/keboola_blue.png",
 	"engines": {
@@ -30,6 +30,11 @@
 				{
 					"id": "keboolaExplorer",
 					"name": "Storage Explorer",
+					"when": "true"
+				},
+				{
+					"id": "keboolaAgents",
+					"name": "AI Agents",
 					"when": "true"
 				}
 			]
@@ -114,6 +119,61 @@
 				"command": "keboola.unwatchTable",
 				"title": "Unwatch Table",
 				"icon": "$(eye-closed)"
+			},
+			{
+				"command": "keboola.agents.create",
+				"title": "Create AI Agent",
+				"icon": "$(add)"
+			},
+			{
+				"command": "keboola.agents.createDemo",
+				"title": "Create Demo Agent",
+				"icon": "$(rocket)"
+			},
+			{
+				"command": "keboola.agents.start",
+				"title": "Start Agent",
+				"icon": "$(play)"
+			},
+			{
+				"command": "keboola.agents.pause",
+				"title": "Pause Agent",
+				"icon": "$(pause)"
+			},
+			{
+				"command": "keboola.agents.resume",
+				"title": "Resume Agent",
+				"icon": "$(play)"
+			},
+			{
+				"command": "keboola.agents.stop",
+				"title": "Stop Agent",
+				"icon": "$(stop)"
+			},
+			{
+				"command": "keboola.agents.openDetail",
+				"title": "Open Agent Detail",
+				"icon": "$(info)"
+			},
+			{
+				"command": "keboola.agents.openManifest",
+				"title": "Open Agent Manifest",
+				"icon": "$(file-code)"
+			},
+			{
+				"command": "keboola.agents.exportReport",
+				"title": "Export Agent Report",
+				"icon": "$(export)"
+			},
+			{
+				"command": "keboola.agents.hitl.approve",
+				"title": "Approve HITL Request",
+				"icon": "$(check)"
+			},
+			{
+				"command": "keboola.agents.hitl.reject",
+				"title": "Reject HITL Request",
+				"icon": "$(x)"
 			}
 		],
 		"menus": {
@@ -127,6 +187,11 @@
 					"command": "keboola.refresh",
 					"when": "view == keboolaExplorer",
 					"group": "navigation@2"
+				},
+				{
+					"command": "keboola.agents.create",
+					"when": "view == keboolaAgents",
+					"group": "navigation@1"
 				}
 			],
 			"view/item/context": [
@@ -194,6 +259,56 @@
 					"command": "keboola.refreshProject",
 					"when": "view == keboolaExplorer && viewItem == keboolaProject",
 					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.create",
+					"when": "view == keboolaAgents",
+					"group": "navigation@1"
+				},
+				{
+					"command": "keboola.agents.start",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.pause",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.resume",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.stop",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.openDetail",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.openManifest",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.exportReport",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "inline"
+				},
+				{
+					"command": "keboola.agents.hitl.approve",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "hitl"
+				},
+				{
+					"command": "keboola.agents.hitl.reject",
+					"when": "view == keboolaAgents && viewItem == agent",
+					"group": "hitl"
 				}
 			],
 			"commandPalette": [
@@ -249,10 +364,54 @@
 					"command": "keboola.watchTable",
 					"title": "Keboola: Watch Table"
 				},
-				{
-					"command": "keboola.unwatchTable",
-					"title": "Keboola: Unwatch Table"
-				}
+							{
+				"command": "keboola.unwatchTable",
+				"title": "Keboola: Unwatch Table"
+			},
+			{
+				"command": "keboola.agents.create",
+				"title": "Keboola: Create AI Agent"
+			},
+			{
+				"command": "keboola.agents.start",
+				"title": "Keboola: Start Agent"
+			},
+			{
+				"command": "keboola.agents.pause",
+				"title": "Keboola: Pause Agent"
+			},
+			{
+				"command": "keboola.agents.resume",
+				"title": "Keboola: Resume Agent"
+			},
+			{
+				"command": "keboola.agents.stop",
+				"title": "Keboola: Stop Agent"
+			},
+			{
+				"command": "keboola.agents.openDetail",
+				"title": "Keboola: Open Agent Detail"
+			},
+			{
+				"command": "keboola.agents.openManifest",
+				"title": "Keboola: Open Agent Manifest"
+			},
+			{
+				"command": "keboola.agents.exportReport",
+				"title": "Keboola: Export Agent Report"
+			},
+			{
+				"command": "keboola.agents.hitl.approve",
+				"title": "Keboola: Approve HITL Request"
+			},
+			{
+				"command": "keboola.agents.hitl.reject",
+				"title": "Keboola: Reject HITL Request"
+			},
+			{
+				"command": "keboola.agents.createDemo",
+				"title": "Keboola: Create Demo Agent"
+			}
 			]
 		},
 		"configuration": {
@@ -267,6 +426,69 @@
 					"type": "string",
 					"default": "",
 					"description": "Keboola Storage API Token"
+				},
+				"keboola.agents.defaultModel": {
+					"type": "string",
+					"default": "gpt-4o-mini",
+					"description": "Default LLM model for AI agents"
+				},
+				"keboola.agents.defaultBudgetUSD": {
+					"type": "number",
+					"default": 10.0,
+					"description": "Default budget in USD for AI agents"
+				},
+				"keboola.agents.defaultTokenBudget": {
+					"type": "number",
+					"default": 10000,
+					"description": "Default token budget for AI agents (0 = unlimited)"
+				},
+				"keboola.agents.defaultTimeLimitSec": {
+					"type": "number",
+					"default": 3600,
+					"description": "Default time limit in seconds for AI agents"
+				},
+				"keboola.agents.allowedLLMs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": ["gpt-4o-mini", "gpt-4o", "claude-3-haiku", "claude-3-sonnet"],
+					"description": "Allowed LLM models for AI agents"
+				},
+				"keboola.agents.allowedTools": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": ["QueryStorage", "AnalyzeData", "GenerateReport"],
+					"description": "Allowed MCP tools for AI agents"
+				},
+				"keboola.agents.contactPolicy": {
+					"type": "string",
+					"enum": ["notify", "notify_modal", "log_only"],
+					"default": "notify",
+					"description": "Contact policy for AI agents"
+				},
+				"keboola.agents.hitlTimeoutSec": {
+					"type": "number",
+					"default": 300,
+					"description": "HITL timeout in seconds"
+				},
+				"keboola.agents.hitlFallback": {
+					"type": "string",
+					"enum": ["pause", "continue_safe", "stop"],
+					"default": "pause",
+					"description": "HITL fallback action"
+				},
+				"keboola.agents.exportTracesToFile": {
+					"type": "boolean",
+					"default": true,
+					"description": "Export traces to file"
+				},
+				"keboola.agents.dataDir": {
+					"type": "string",
+					"default": ".keboola_agents",
+					"description": "Data directory for AI agents"
 				}
 			}
 		}

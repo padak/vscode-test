@@ -5,6 +5,192 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-01-21
+
+### 🚀 MAJOR RELEASE: AI Agents Demo Module
+- **🆕 NEW: AI Agents System** - Complete AI agent management with creation, monitoring, and execution control
+- **🤖 Agent Runtime**: Real-time agent execution with policy enforcement and HITL (Human-in-the-Loop) support
+- **📊 Agent Monitoring**: Live agent status tracking with progress, confidence, and cost monitoring
+- **🎯 Agent Policies**: Comprehensive safety policies and guardrails for agent execution
+- **👥 HITL Integration**: Human approval/rejection system for agent actions requiring oversight
+- **📈 Agent Traces**: Detailed execution traces and debugging information
+- **💼 Agent Store**: Persistent agent configuration and state management
+- **🎨 Agent UI**: Rich webview panels for agent creation and detailed monitoring
+
+### ✨ Added - AI Agents Infrastructure
+- **AgentStore.ts**: Complete agent state management with file-based persistence
+- **AgentRuntime.ts**: Agent execution engine with policy enforcement and lifecycle management
+- **AgentPolicy.ts**: Safety policies and guardrails with violation detection
+- **AgentTraces.ts**: Execution tracing and debugging system
+- **AgentsTreeProvider.ts**: Tree view provider for agent organization by status
+- **CreateAgentPanel.ts**: Visual agent creation interface with validation
+- **AgentDetailPanel.ts**: Real-time agent monitoring with live updates
+- **Agent Settings**: Comprehensive configuration system for agent behavior
+
+### 🎯 Agent Management Features
+#### **Agent Creation:**
+- **Visual Interface**: WebView-based agent creation with form validation
+- **Configuration Options**: Model selection, budget limits, tool permissions, and policies
+- **Cost Estimation**: Real-time cost calculation and budget planning
+- **Policy Configuration**: Safety guardrails and execution limits
+- **Demo Agent**: Pre-configured demo agent for easy testing
+
+#### **Agent Monitoring:**
+- **Status Tracking**: Real-time status updates (starting, running, paused, completed, failed)
+- **Progress Monitoring**: Live progress percentage and confidence tracking
+- **Cost Tracking**: USD and token budget monitoring
+- **Tool Call Tracking**: Detailed tool usage and execution metrics
+- **HITL Requests**: Human-in-the-loop approval system for sensitive actions
+
+#### **Agent Control:**
+- **Start/Pause/Resume/Stop**: Complete lifecycle control
+- **Policy Enforcement**: Automatic policy violation detection and handling
+- **HITL Management**: Approve or reject agent actions requiring oversight
+- **Trace Export**: Export execution traces for debugging and analysis
+- **Report Generation**: Comprehensive agent execution reports
+
+### 🎨 User Interface Enhancements
+#### **Agents Tree View:**
+- **Status Organization**: Agents grouped by Running, Completed, Failed, and HITL
+- **Context Menus**: Quick actions for agent management
+- **Status Icons**: Visual indicators for agent states
+- **Progress Display**: Real-time progress and confidence indicators
+
+#### **Agent Creation Panel:**
+- **Form Validation**: Real-time validation of agent configurations
+- **Cost Estimation**: Budget planning with cost breakdown
+- **Policy Configuration**: Safety settings and execution limits
+- **Tool Selection**: Available MCP tools and permissions
+
+#### **Agent Detail Panel:**
+- **Live Updates**: Real-time monitoring with 2-second refresh intervals
+- **Execution Traces**: Detailed step-by-step execution information
+- **HITL Interface**: Human approval/rejection for agent actions
+- **Cost Analytics**: Budget usage and token consumption tracking
+- **Tool Call History**: Complete tool usage and results
+
+### 🔧 Technical Implementation
+#### **Agent Architecture:**
+- **Modular Design**: Clean separation between store, runtime, policy, and UI
+- **Event-Driven**: Real-time updates through event emission system
+- **File-Based Storage**: Persistent agent data in `.keboola_agents` directory
+- **Type Safety**: Complete TypeScript coverage with comprehensive interfaces
+- **Error Handling**: Graceful error management with user-friendly messages
+
+#### **Policy System:**
+- **Safety Guardrails**: Forbidden actions, rate limits, and data access controls
+- **PII Handling**: Personal data detection and masking policies
+- **Escalation Rules**: Automatic pause/stop on policy violations
+- **HITL Integration**: Human oversight for sensitive operations
+
+#### **Runtime Features:**
+- **Simulated Execution**: Tool call simulation with realistic responses
+- **Cost Tracking**: Real-time USD and token budget monitoring
+- **Progress Simulation**: Realistic progress and confidence updates
+- **HITL Simulation**: Human-in-the-loop request generation
+- **Trace Recording**: Comprehensive execution logging
+
+### 📊 Agent Configuration System
+#### **Agent Settings:**
+- **Default Model**: Configurable default LLM (gpt-4o-mini, gpt-4o, claude-3-haiku)
+- **Budget Limits**: Default USD and token budgets
+- **Time Limits**: Maximum execution time limits
+- **Allowed Tools**: Configurable MCP tool permissions
+- **Contact Policy**: HITL notification preferences
+- **Data Directory**: Configurable agent data storage location
+
+#### **Policy Configuration:**
+- **Max Concurrent Tools**: Limit simultaneous tool executions
+- **Rate Limits**: API call frequency restrictions
+- **Forbidden Actions**: Blocked operation types
+- **Data Access Scopes**: Permitted data access levels
+- **PII Handling**: Personal data protection policies
+- **Escalation Actions**: Policy violation responses
+
+### 🎯 Demo Agent Features
+#### **Pre-Configured Demo Agent:**
+- **Goal**: Analyze data and generate comprehensive reports
+- **Model**: gpt-4o-mini with 5000 token budget
+- **Tools**: QueryStorage, AnalyzeData, GenerateReport
+- **Budget**: $5.0 USD with conservative safety settings
+- **Time Limit**: 30 minutes maximum execution time
+- **Policy**: Conservative safety guardrails with HITL integration
+
+### 🔄 Commands & Integration
+#### **New Agent Commands:**
+- **`keboola.agents.create`**: Create new AI agent with visual interface
+- **`keboola.agents.createDemo`**: Create pre-configured demo agent
+- **`keboola.agents.start`**: Start agent execution
+- **`keboola.agents.pause`**: Pause agent execution
+- **`keboola.agents.resume`**: Resume paused agent
+- **`keboola.agents.stop`**: Stop agent execution
+- **`keboola.agents.openDetail`**: Open agent detail panel
+- **`keboola.agents.openManifest`**: View agent configuration
+- **`keboola.agents.exportReport`**: Export agent execution report
+- **`keboola.agents.hitl.approve`**: Approve HITL request
+- **`keboola.agents.hitl.reject`**: Reject HITL request
+
+#### **UI Integration:**
+- **Agents Tree View**: Integrated into Keboola Platform activity bar
+- **Context Menus**: Right-click actions for agent management
+- **Command Palette**: Full command integration for power users
+- **Settings Panel**: Agent configuration in extension settings
+
+### 📦 Technical Specifications
+- **Extension Size**: 420KB (118 files, +11 new agent-related files)
+- **Agent Data Storage**: `.keboola_agents` directory in workspace
+- **File Structure**: Each agent has dedicated subdirectory with config, state, traces
+- **WebView Assets**: JavaScript and CSS for agent creation and monitoring panels
+- **Type Safety**: Complete TypeScript coverage for all agent interfaces
+
+### 🎯 User Workflows
+#### **Agent Creation Workflow:**
+1. **Open Agents View**: Navigate to AI Agents in Keboola Platform
+2. **Create Agent**: Use "Create AI Agent" command or demo agent
+3. **Configure Settings**: Set model, budget, tools, and policies
+4. **Validate Configuration**: Real-time validation and cost estimation
+5. **Start Execution**: Begin agent execution with monitoring
+
+#### **Agent Monitoring Workflow:**
+1. **Browse Agents**: View agents organized by status in tree view
+2. **Monitor Progress**: Real-time status, progress, and confidence updates
+3. **Handle HITL**: Approve or reject agent actions requiring oversight
+4. **Review Traces**: Examine detailed execution traces for debugging
+5. **Export Reports**: Generate comprehensive execution reports
+
+#### **Demo Agent Testing:**
+1. **Create Demo**: Use "Create Demo Agent" command
+2. **Start Execution**: Begin demo agent with pre-configured settings
+3. **Monitor Progress**: Watch real-time execution with live updates
+4. **Handle HITL**: Experience human-in-the-loop approval system
+5. **Review Results**: Examine execution traces and final reports
+
+### 💡 Development Benefits
+#### **For Data Engineers:**
+- **Automated Analysis**: AI agents for data exploration and reporting
+- **Policy Safety**: Comprehensive guardrails for automated operations
+- **Human Oversight**: HITL system for sensitive data operations
+- **Cost Control**: Budget limits and token tracking for resource management
+
+#### **For Developers:**
+- **Agent Testing**: Demo agents for testing AI capabilities
+- **Configuration Management**: Visual agent creation and configuration
+- **Debugging Tools**: Detailed traces and execution monitoring
+- **Integration Ready**: Foundation for real MCP tool integration
+
+#### **For Operations Teams:**
+- **Automated Monitoring**: AI agents for system monitoring and alerting
+- **Policy Enforcement**: Safety policies for automated operations
+- **Audit Trails**: Complete execution traces and reports
+- **Resource Management**: Budget and token usage tracking
+
+### 🚀 Version 4.0.0 Impact
+This major release introduces a comprehensive AI agents system that transforms the extension from a data management tool into a complete AI-powered data engineering platform. The AI agents module provides safe, controlled automation with human oversight, making it an essential tool for modern data engineering workflows.
+
+**The extension now provides complete AI agent management with safety policies, human oversight, and real-time monitoring!** 🤖🎯
+
+---
+
 ## [3.3.3] - 2025-07-29
 
 ### 🎯 MAJOR UI REORGANIZATION: API Status Move to Top Level

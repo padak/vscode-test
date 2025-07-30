@@ -6,7 +6,40 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ---
 
-## 🚀 **Key Features (Version 3.3.3)**
+## 🚀 **Key Features (Version 4.0.0)**
+
+### 🤖 **NEW: AI Agents System** *(Version 4.0.0)*
+- **🆕 AI Agent Management**: Create, monitor, and control AI agents for data engineering tasks
+- **🤖 Agent Runtime**: Real-time agent execution with policy enforcement and safety guardrails
+- **📊 Live Monitoring**: Track agent status, progress, confidence, and cost in real-time
+- **👥 HITL Integration**: Human-in-the-Loop approval system for sensitive agent actions
+- **🎯 Policy Enforcement**: Comprehensive safety policies and execution guardrails
+- **📈 Execution Traces**: Detailed debugging and analysis of agent execution
+- **💼 Agent Store**: Persistent agent configuration and state management
+- **🎨 Rich UI**: Visual agent creation and detailed monitoring panels
+
+#### **Agent Creation & Configuration:**
+- **Visual Interface**: WebView-based agent creation with real-time validation
+- **Model Selection**: Choose from gpt-4o-mini, gpt-4o, claude-3-haiku
+- **Budget Management**: Set USD and token limits with cost estimation
+- **Tool Permissions**: Configure MCP tool access and capabilities
+- **Safety Policies**: Define guardrails, rate limits, and forbidden actions
+- **Demo Agent**: Pre-configured demo agent for easy testing
+
+#### **Agent Monitoring & Control:**
+- **Status Tracking**: Real-time updates (starting, running, paused, completed, failed)
+- **Progress Monitoring**: Live progress percentage and confidence tracking
+- **Cost Analytics**: USD and token budget monitoring with usage tracking
+- **Tool Call History**: Detailed tool usage and execution metrics
+- **HITL Management**: Approve or reject agent actions requiring oversight
+- **Lifecycle Control**: Start, pause, resume, and stop agent execution
+
+#### **Agent Organization:**
+- **Status Groups**: Agents organized by Running, Completed, Failed, and HITL
+- **Tree View**: Integrated into Keboola Platform activity bar
+- **Context Menus**: Quick actions for agent management
+- **Real-time Updates**: Live status and progress indicators
+- **Detail Panels**: Comprehensive agent information and monitoring
 
 ### 📊 **Storage Explorer** *(Preserved from v2.x)*
 - **Browse Your Data Structure**: See all your stages (in, out), buckets, and tables in a tree view
@@ -49,6 +82,7 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Single-Project Architecture**: Streamlined to single-project focus, removing multi-project complexity
 - **Professional Layout**: Enterprise-grade tree organization with clear purpose separation
 - **Immediate Feedback**: API connection status visible without any interaction or expansion
+- **NEW: AI Agents Section**: Fourth major section alongside Storage, Configurations, and Jobs
 
 ### 📁 **Smart Data Export** *(Enhanced)*
 - **Workspace Integration**: Export data directly into your VS Code workspace
@@ -113,9 +147,9 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 #### **Activity Bar Integration**
 - Dedicated Keboola icon in VS Code's side panel
 - **API Status at Top Level**: Connection status appears as the very first item for immediate awareness
-- **Triple-Section View**: Storage, Configurations, and Jobs in the same unified interface
+- **Quadruple-Section View**: Storage, Configurations, Jobs, and AI Agents in the same unified interface
 - Always accessible from anywhere in your project
-- **Unified Navigation**: Switch seamlessly between data, configuration, and job monitoring
+- **Unified Navigation**: Switch seamlessly between data, configuration, job monitoring, and AI agent management
 
 #### **Smart Panels**
 - **API Status Panel**: Global connection status indicator at the top level
@@ -125,14 +159,18 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Configuration Panels**: Beautiful HTML panels for branch and configuration metadata
 - **NEW: Job Detail Panels**: Comprehensive job information with timing, status, and error details
 - **NEW: Recent Jobs Integration**: Job history embedded in configuration detail panels
+- **NEW: Agent Creation Panel**: Visual interface for creating and configuring AI agents
+- **NEW: Agent Detail Panel**: Real-time monitoring with live updates and HITL interface
 
 #### **Enhanced Commands**
 - **Refresh Storage**: Update storage data only
 - **Refresh Configurations**: Update configurations data only
 - **NEW: Refresh Jobs**: Update jobs data and status
+- **NEW: Agent Commands**: Create, start, pause, resume, stop, and monitor AI agents
 - **Show Details**: Context-aware detail views for any selected item
 - **NEW: Show Job Details**: Open comprehensive job information panels
 - **NEW: Show Jobs for Configuration**: View jobs filtered by specific configuration
+- **NEW: Agent Management**: Complete lifecycle control for AI agents
 - **Command Palette**: Full command integration for power users
 
 #### **Export Workflow**
@@ -157,6 +195,15 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 5. Use "Load more..." to see additional jobs
 6. Access job actions: refresh status, copy ID, open in Keboola UI
 7. View recent jobs for any configuration in the configuration detail panels
+
+#### **NEW: AI Agents Workflow** *(Version 4.0.0)*
+1. Navigate to AI Agents section in the tree view
+2. Create new agent or use demo agent for testing
+3. Configure agent settings (model, budget, tools, policies)
+4. Start agent execution and monitor real-time progress
+5. Handle HITL requests for sensitive actions
+6. Review execution traces and export reports
+7. Manage agent lifecycle (pause, resume, stop)
 
 ---
 
@@ -212,6 +259,15 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Capacity Planning**: Resource usage insights for infrastructure planning
 - **Configuration Testing**: Track job results after configuration changes
 
+### **NEW: For AI & Automation Teams** *(Version 4.0.0)*
+- **AI Agent Management**: Create and monitor AI agents for data engineering tasks
+- **Policy Enforcement**: Implement safety guardrails and execution limits
+- **Human Oversight**: HITL system for sensitive automated operations
+- **Cost Control**: Budget and token tracking for AI resource management
+- **Execution Monitoring**: Real-time agent status and progress tracking
+- **Debugging Tools**: Detailed execution traces and analysis capabilities
+- **Automation Testing**: Demo agents for testing AI capabilities safely
+
 ---
 
 ## 💡 **Tips & Best Practices**
@@ -234,6 +290,15 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Configuration Context**: Use Recent Jobs in configuration panels to see execution history
 - **Refresh Regularly**: Use refresh buttons to get latest job status updates
 - **Error Investigation**: Click failed jobs immediately for detailed error analysis
+
+### **NEW: AI Agents Management** *(Version 4.0.0)*
+- **Start with Demo Agent**: Use "Create Demo Agent" for safe testing
+- **Configure Policies**: Set appropriate safety guardrails and execution limits
+- **Monitor Progress**: Track real-time status, progress, and confidence updates
+- **Handle HITL**: Approve or reject agent actions requiring human oversight
+- **Review Traces**: Examine execution traces for debugging and analysis
+- **Export Reports**: Generate comprehensive execution reports for documentation
+- **Cost Management**: Monitor budget usage and token consumption
 
 ### **Workspace Organization**
 - Choose meaningful export folder names
@@ -317,6 +382,7 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 5. **Explore Storage**: Browse your data in the Storage section
 6. **Explore Configurations**: Check out the Configurations section below Storage
 7. **NEW: Monitor Jobs**: Track job execution in the Jobs section for real-time monitoring
+8. **NEW: Create AI Agents**: Build and manage AI agents in the AI Agents section
 
 ### **Storage Workflow**
 1. **Browse**: Navigate through stages, buckets, and tables
@@ -340,4 +406,13 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 6. **Use Job Actions**: Refresh status, copy IDs, or open in Keboola UI
 7. **Check Configuration Jobs**: View recent jobs in configuration detail panels
 
-**Ready to manage your complete Keboola ecosystem with real-time job monitoring like never before!** 🚀📊 
+### **NEW: AI Agents Workflow** *(Version 4.0.0)*
+1. **Navigate to AI Agents**: Find the AI Agents section in the tree view
+2. **Create Agent**: Use "Create AI Agent" or "Create Demo Agent" commands
+3. **Configure Settings**: Set model, budget, tools, and safety policies
+4. **Start Execution**: Begin agent execution with real-time monitoring
+5. **Handle HITL**: Approve or reject agent actions requiring oversight
+6. **Monitor Progress**: Track status, progress, and cost in real-time
+7. **Review Results**: Examine traces and export execution reports
+
+**Ready to manage your complete Keboola ecosystem with AI agents, real-time monitoring, and human oversight!** 🚀🤖📊 
