@@ -111,6 +111,15 @@ export class CreateAgentPanel {
             const config = this.buildAgentConfig(data);
             const agentId = await this.store.createRun(config);
             
+            // Automatically start the agent after creation
+            try {
+                await this.runtime.startAgent(agentId);
+                console.log(`Agent ${agentId} created and started successfully`);
+            } catch (startError) {
+                console.error(`Failed to start agent ${agentId}:`, startError);
+                // Still show success message even if start fails
+            }
+            
             this._panel.webview.postMessage({
                 command: 'agentCreated',
                 data: { agentId, success: true }
@@ -214,7 +223,8 @@ export class CreateAgentPanel {
             hitlTimeoutSec: 300,
             hitlFallback: 'pause',
             exportTracesToFile: true,
-            dataDir: '.keboola_agents'
+            dataDir: '.keboola_agents',
+            enableSimulatedEvents: false
         };
     }
 

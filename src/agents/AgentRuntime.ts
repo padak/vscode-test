@@ -7,6 +7,7 @@ import { PolicyEnforcer } from './AgentPolicy';
 export class AgentRuntime {
     private store: AgentStore;
     private hooks: AgentRuntimeHooks;
+    private settings: { enableSimulatedEvents: boolean };
     private runningAgents = new Map<AgentId, {
         config: AgentConfig;
         runState: AgentRunState;
@@ -15,9 +16,10 @@ export class AgentRuntime {
         startTime: Date;
     }>();
 
-    constructor(store: AgentStore, hooks: AgentRuntimeHooks = {}) {
+    constructor(store: AgentStore, hooks: AgentRuntimeHooks = {}, settings: { enableSimulatedEvents: boolean } = { enableSimulatedEvents: true }) {
         this.store = store;
         this.hooks = hooks;
+        this.settings = settings;
     }
 
     async startAgent(agentId: AgentId): Promise<void> {
@@ -230,13 +232,13 @@ export class AgentRuntime {
             await this.simulateToolCall(agentId, step.toolId, step.title);
         }
 
-        // Occasionally require HITL
-        if (Math.random() < 0.1) { // 10% chance
+        // Occasionally require HITL (only if simulated events are enabled)
+        if (this.settings.enableSimulatedEvents && Math.random() < 0.01) { // 1% chance (reduced from 10%)
             await this.requireHITL(agentId, step);
         }
 
-        // Occasionally trigger policy violation
-        if (Math.random() < 0.05) { // 5% chance
+        // Occasionally trigger policy violation (only if simulated events are enabled)
+        if (this.settings.enableSimulatedEvents && Math.random() < 0.005) { // 0.5% chance (reduced from 5%)
             const violation = this.simulatePolicyViolation(step);
             if (violation) {
                 await this.handlePolicyViolation(agentId, violation);

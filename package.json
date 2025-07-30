@@ -174,6 +174,11 @@
 				"command": "keboola.agents.hitl.reject",
 				"title": "Reject HITL Request",
 				"icon": "$(x)"
+			},
+			{
+				"command": "keboola.agents.toggleSimulatedEvents",
+				"title": "Toggle Simulated Events",
+				"icon": "$(gear)"
 			}
 		],
 		"menus": {
@@ -192,6 +197,11 @@
 					"command": "keboola.agents.create",
 					"when": "view == keboolaAgents",
 					"group": "navigation@1"
+				},
+				{
+					"command": "keboola.agents.toggleSimulatedEvents",
+					"when": "view == keboolaAgents",
+					"group": "navigation@2"
 				}
 			],
 			"view/item/context": [

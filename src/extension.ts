@@ -126,10 +126,16 @@ async function fetchProjectName(context: vscode.ExtensionContext, api: KeboolaAp
 function initializeAgentsSystem(context: vscode.ExtensionContext) {
     // Initialize agent store and runtime
     agentStore = new AgentStore(context);
+    
+    // Get agent settings from context
+    const enableSimulatedEvents = context.globalState.get<boolean>('keboola.agents.enableSimulatedEvents') ?? false;
+    
     agentRuntime = new AgentRuntime(agentStore, {
         onStateChange: (from: string, to: string) => {
             console.log(`Agent state changed from ${from} to ${to}`);
         }
+    }, {
+        enableSimulatedEvents
     });
     
     // Initialize agents tree provider
@@ -334,10 +340,32 @@ function registerCommands(context: vscode.ExtensionContext) {
         
         try {
             const agentId = await agentStore.createDemoAgent();
-            vscode.window.showInformationMessage(`Demo agent created: ${agentId}`);
+            
+            // Automatically start the demo agent
+            try {
+                await agentRuntime.startAgent(agentId);
+                vscode.window.showInformationMessage(`Demo agent created and started: ${agentId}`);
+            } catch (startError) {
+                console.error(`Failed to start demo agent ${agentId}:`, startError);
+                vscode.window.showInformationMessage(`Demo agent created but failed to start: ${agentId}`);
+            }
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to create demo agent: ${error}`);
         }
+    });
+
+    // Toggle simulated events command
+    const toggleSimulatedEventsCmd = vscode.commands.registerCommand('keboola.agents.toggleSimulatedEvents', async () => {
+        const currentSetting = context.globalState.get<boolean>('keboola.agents.enableSimulatedEvents') ?? false;
+        const newSetting = !currentSetting;
+        
+        await context.globalState.update('keboola.agents.enableSimulatedEvents', newSetting);
+        
+        // Update the runtime settings
+        (agentRuntime as any).settings.enableSimulatedEvents = newSetting;
+        
+        const status = newSetting ? 'enabled' : 'disabled';
+        vscode.window.showInformationMessage(`Agent simulated events ${status}`);
     });
 
     // Add all commands to subscriptions
@@ -360,7 +388,8 @@ function registerCommands(context: vscode.ExtensionContext) {
         watchTableCmd,
         unwatchTableCmd,
         createAgentCmd,
-        createDemoAgentCmd
+        createDemoAgentCmd,
+        toggleSimulatedEventsCmd
     );
 }
 

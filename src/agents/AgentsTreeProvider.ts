@@ -107,14 +107,19 @@ class AgentTreeItem extends vscode.TreeItem {
         
         this.label = this.formatLabel();
         this.iconPath = new vscode.ThemeIcon(this.getStatusIcon());
-        this.contextValue = `agent_${agent.status}`;
+        this.contextValue = 'agent';
         this.tooltip = this.formatTooltip();
         this.description = this.formatDescription();
+        this.command = {
+            command: 'keboola.agents.openDetail',
+            title: 'Open Agent Detail',
+            arguments: [this.agent.id]
+        };
     }
 
     private formatLabel(): string {
-        const config = this.getConfig();
-        const name = config?.name || this.agent.id;
+        // For now, use the agent ID as name until we can properly load config
+        const name = this.agent.id;
         const progress = this.agent.progressPct;
         const confidence = this.agent.confidencePct;
         
@@ -123,7 +128,7 @@ class AgentTreeItem extends vscode.TreeItem {
 
     private formatDescription(): string {
         const spent = this.agent.spentUSD;
-        const budget = this.getConfig()?.budgetUSD || 0;
+        const budget = 10.0; // Default budget
         
         if (budget > 0) {
             return `$${spent.toFixed(2)}/${budget.toFixed(2)}`;
@@ -132,9 +137,8 @@ class AgentTreeItem extends vscode.TreeItem {
     }
 
     private formatTooltip(): string {
-        const config = this.getConfig();
-        const name = config?.name || this.agent.id;
-        const goal = config?.goal || 'No goal specified';
+        const name = this.agent.id;
+        const goal = 'Sample goal'; // Default goal
         const status = this.agent.status;
         const progress = this.agent.progressPct;
         const confidence = this.agent.confidencePct;
@@ -168,22 +172,16 @@ class AgentTreeItem extends vscode.TreeItem {
         }
     }
 
-    private getConfig(): any {
-        // In a real implementation, this would load the config from the store
-        // For now, return a mock config
-        return {
-            name: this.agent.id,
-            goal: 'Sample goal',
-            budgetUSD: 10.0
-        };
-    }
+    // Note: In a future version, we'll properly load the config from the store
+    // For now, the agent ID is used as the display name
 }
 
 // Context menu commands for agent items
 export function registerAgentCommands(context: vscode.ExtensionContext, runtime: AgentRuntime, store: AgentStore) {
     const commands = [
-        vscode.commands.registerCommand('keboola.agents.start', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.start', async (item: any) => {
             try {
+                const agentId = item?.agent?.id || item;
                 await runtime.startAgent(agentId);
                 vscode.window.showInformationMessage(t.msg_agent_started);
             } catch (error) {
@@ -191,8 +189,9 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.pause', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.pause', async (item: any) => {
             try {
+                const agentId = item?.agent?.id || item;
                 await runtime.pauseAgent(agentId);
                 vscode.window.showInformationMessage(t.msg_agent_paused);
             } catch (error) {
@@ -200,8 +199,9 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.resume', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.resume', async (item: any) => {
             try {
+                const agentId = item?.agent?.id || item;
                 await runtime.resumeAgent(agentId);
                 vscode.window.showInformationMessage(t.msg_agent_resumed);
             } catch (error) {
@@ -209,8 +209,9 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.stop', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.stop', async (item: any) => {
             try {
+                const agentId = item?.agent?.id || item;
                 await runtime.stopAgent(agentId);
                 vscode.window.showInformationMessage(t.msg_agent_stopped);
             } catch (error) {
@@ -218,16 +219,19 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.openDetail', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.openDetail', async (item: any) => {
             try {
+                // Extract agent ID from tree item or use the passed argument
+                const agentId = item?.agent?.id || item;
                 AgentDetailPanel.createOrShow(agentId, vscode.extensions.getExtension('keboola.keboola-data-engineering-booster')!.extensionUri, context, store, runtime);
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to open agent detail panel: ${error}`);
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.openManifest', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.openManifest', async (item: any) => {
             try {
+                const agentId = item?.agent?.id || item;
                 const manifestPath = store.getManifestPath(agentId);
                 if (await store.loadManifest(agentId)) {
                     const doc = await vscode.workspace.openTextDocument(manifestPath);
@@ -241,8 +245,9 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.exportReport', async (agentId: AgentId) => {
+        vscode.commands.registerCommand('keboola.agents.exportReport', async (item: any) => {
             try {
+                const agentId = item?.agent?.id || item;
                 const report = await store.loadReport(agentId);
                 if (report) {
                     const reportJson = JSON.stringify(report, null, 2);
@@ -260,8 +265,9 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.hitl.approve', async (agentId: AgentId, hitlId: string) => {
+        vscode.commands.registerCommand('keboola.agents.hitl.approve', async (item: any, hitlId: string) => {
             try {
+                const agentId = item?.agent?.id || item;
                 await runtime.approveHITL(agentId, hitlId);
                 vscode.window.showInformationMessage(t.msg_hitl_approved);
             } catch (error) {
@@ -269,8 +275,9 @@ export function registerAgentCommands(context: vscode.ExtensionContext, runtime:
             }
         }),
 
-        vscode.commands.registerCommand('keboola.agents.hitl.reject', async (agentId: AgentId, hitlId: string) => {
+        vscode.commands.registerCommand('keboola.agents.hitl.reject', async (item: any, hitlId: string) => {
             try {
+                const agentId = item?.agent?.id || item;
                 await runtime.rejectHITL(agentId, hitlId);
                 vscode.window.showInformationMessage(t.msg_hitl_rejected);
             } catch (error) {

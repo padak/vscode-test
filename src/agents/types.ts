@@ -138,6 +138,7 @@ export interface AgentSettings {
     hitlFallback: 'pause' | 'continue_safe' | 'stop';
     exportTracesToFile: boolean;
     dataDir: string;
+    enableSimulatedEvents: boolean; // Enable/disable HITL and policy violation simulation
 }
 
 export interface AgentRuntimeHooks {
