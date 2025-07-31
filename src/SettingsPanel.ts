@@ -155,6 +155,9 @@ export class SettingsPanel {
                     case 'systemCheck':
                         await this.handleSystemCheck();
                         break;
+                    case 'setStackUrl':
+                        await this.handleProviderSelection(message.url);
+                        break;
                 }
             },
             null,
@@ -172,8 +175,15 @@ export class SettingsPanel {
             // Mark as last used
             await this.context.globalState.update('keboola.lastUsedUrl', url);
             
-            // Refresh the content to show the selection
-            this.updateContent();
+            // Get updated settings for banner
+            const updatedSettings = this.getCurrentSettings();
+            const updatedBannerHtml = this.getCurrentBannerHtml(updatedSettings);
+            
+            // Send updated banner HTML back to webview
+            this.panel.webview.postMessage({
+                command: 'stackSaved',
+                html: updatedBannerHtml
+            });
             
             // Show feedback
             this.panel.webview.postMessage({
@@ -625,6 +635,19 @@ export class SettingsPanel {
         panel.webview.html = content;
     }
 
+    private getCurrentBannerHtml(settings: SettingsData): string {
+        const exportLimitText = settings.exportRowLimit === 0 ? 'unlimited' : settings.exportRowLimit.toLocaleString();
+        const headersText = settings.includeHeaders ? 'included' : 'excluded';
+        const tokenState = settings.token ? '****** (saved)' : 'Not set';
+        const stackUrl = settings.apiUrl || 'No provider selected';
+        
+        return `
+            <div class="current-banner">
+                <strong>Current:</strong> ${stackUrl} • Token: ${tokenState} • Preview: ${settings.previewRowLimit.toLocaleString()} • Export: ${exportLimitText} • Headers: ${headersText}
+            </div>
+        `;
+    }
+
     private getCurrentSettings(): SettingsData {
         return {
             apiUrl: this.context.globalState.get<string>('keboola.apiUrl') || '',
@@ -649,39 +672,41 @@ export class SettingsPanel {
     private getWebviewContent(): string {
         const settings = this.getCurrentSettings();
         
-        // Generate provider cards
-        const providerCards = this.cloudProviders.map(provider => {
-            const regionsHtml = provider.regions.map(region => {
+        // Generate current banner HTML
+        const currentBannerHtml = this.getCurrentBannerHtml(settings);
+        
+        // Generate provider groups and stack cards
+        const providerGroupsHtml = this.cloudProviders.map(provider => {
+            const stackCardsHtml = provider.regions.map(region => {
                 const isLastUsed = settings.lastUsed === region.url;
                 const isSelected = settings.apiUrl === region.url;
                 
                 return `
-                    <div class="region-item ${isSelected ? 'selected' : ''}" 
-                         onclick="selectProvider('${region.url}')" 
-                         data-url="${region.url}">
-                        <div class="region-content">
-                            <span class="region-flag">${region.flag}</span>
-                            <span class="region-name">${region.name}</span>
-                            ${isLastUsed ? '<span class="last-used-badge">LAST USED</span>' : ''}
+                    <button class="stack-card ${isSelected ? 'is-selected' : ''}" 
+                            data-url="${region.url}"
+                            aria-pressed="${isSelected}"
+                            tabindex="0">
+                        <span class="stack-card__flag">${region.flag}</span>
+                        <div class="stack-card__text">
+                            <div class="stack-card__title">${region.name}</div>
+                            <div class="stack-card__url">${region.url}</div>
                         </div>
-                        <div class="region-url">${region.url}</div>
-                    </div>
+                        ${isLastUsed ? '<span class="stack-card__badge">LAST USED</span>' : ''}
+                    </button>
                 `;
             }).join('');
 
             const iconHtml = provider.icon ? 
-                `<img src="${this.panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', provider.icon))}" alt="${provider.name}" class="provider-icon">` : 
-                '<div class="provider-icon-placeholder">🧪</div>';
+                `<img src="${this.panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', provider.icon))}" alt="${provider.name}" />` : 
+                '<div style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🧪</div>';
 
             return `
-                <div class="provider-card">
-                    <div class="provider-header">
+                <div class="provider">
+                    <div class="provider-title">
                         ${iconHtml}
-                        <h3 class="provider-name">${provider.name}</h3>
+                        <span>${provider.name}</span>
                     </div>
-                    <div class="regions">
-                        ${regionsHtml}
-                    </div>
+                    ${stackCardsHtml}
                 </div>
             `;
         }).join('');
@@ -697,6 +722,23 @@ export class SettingsPanel {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Keboola Settings</title>
             <style>
+                :root {
+                    --accent: #1F6FEB;
+                    --accent-ink: #0F2B5A;
+                    --accent-tint: #E9F2FF;
+                    --surface: var(--vscode-editor-background);
+                    --text: var(--vscode-foreground);
+                    --muted: var(--vscode-descriptionForeground);
+                    --border: var(--vscode-widget-border, #D1D5DB);
+                }
+                
+                .vscode-dark:root {
+                    --accent: #4C9BFF;
+                    --accent-ink: #DCEBFF;
+                    --accent-tint: rgba(76,155,255,0.14);
+                    --border: var(--vscode-widget-border, #3A3A3A);
+                }
+                
                 body {
                     font-family: var(--vscode-font-family);
                     font-size: var(--vscode-font-size);
@@ -729,23 +771,103 @@ export class SettingsPanel {
                     padding-bottom: 12px;
                 }
                 
-                .provider-card {
-                    margin-bottom: 20px;
-                    border: 1px solid var(--vscode-input-border);
-                    border-radius: 6px;
-                    overflow: hidden;
+                .current-banner {
+                    background: var(--accent-tint);
+                    color: var(--text);
+                    border: 1px solid var(--accent);
+                    border-radius: 10px;
+                    padding: 12px 14px;
+                    margin: 12px 0 20px;
+                    font-size: 13px;
+                    line-height: 1.35;
                 }
                 
-                .provider-header {
+                .current-banner strong {
+                    color: var(--accent-ink);
+                }
+                
+                .provider {
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 12px;
+                    margin: 16px 0;
+                    background: var(--surface);
+                }
+                
+                .provider-title {
                     display: flex;
                     align-items: center;
-                    padding: 16px;
-                    background-color: var(--vscode-list-hoverBackground);
-                    border-bottom: 1px solid var(--vscode-widget-border);
+                    gap: 10px;
+                    font-weight: 600;
+                    margin: 4px 6px 10px;
                 }
                 
-                .provider-icon {
-                    width: 24px;
+                .provider-title img {
+                    width: 22px;
+                    height: 22px;
+                }
+                
+                .stack-card {
+                    appearance: none;
+                    width: 100%;
+                    text-align: left;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 14px 16px;
+                    margin: 8px 0;
+                    background: transparent;
+                    color: var(--text);
+                    border: 1.5px solid var(--border);
+                    border-radius: 10px;
+                    transition: background .15s, border-color .15s, box-shadow .15s;
+                }
+                
+                .stack-card:hover {
+                    border-color: var(--accent);
+                    background: color-mix(in srgb, var(--accent-tint) 70%, transparent);
+                }
+                
+                .stack-card:focus-visible {
+                    outline: 2px solid var(--accent);
+                    outline-offset: 2px;
+                }
+                
+                .stack-card.is-selected {
+                    border-color: var(--accent);
+                    background: var(--accent-tint);
+                    box-shadow: inset 3px 0 0 0 var(--accent);
+                }
+                
+                .stack-card__flag {
+                    font-size: 18px;
+                }
+                
+                .stack-card__text {
+                    flex: 1 1 auto;
+                }
+                
+                .stack-card__title {
+                    font-weight: 600;
+                    font-size: 15px;
+                    margin-bottom: 2px;
+                }
+                
+                .stack-card__url {
+                    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                    font-size: 12.5px;
+                    color: var(--muted);
+                    word-break: break-all;
+                }
+                
+                .stack-card__badge {
+                    font-size: 11px;
+                    padding: 3px 8px;
+                    border-radius: 999px;
+                    background: #DFAF62;
+                    color: #161616;
+                }
                     height: 24px;
                     margin-right: 12px;
                 }
@@ -1003,16 +1125,11 @@ export class SettingsPanel {
                 <div class="section">
                     <h2 class="section-title">🔌 Connection Settings</h2>
                     
-                    <div class="current-settings" id="currentSettings">
-                        <strong>Current:</strong> ${settings.apiUrl || 'No provider selected'} | 
-                        Token: ${settings.token ? '****** (saved)' : 'Not set'} | 
-                        Preview: ${settings.previewRowLimit.toLocaleString()} rows | 
-                        Export: ${exportLimitText} | Headers: ${headersText}
-                    </div>
+                    ${currentBannerHtml}
                     
                     <h3 style="margin-bottom: 16px; color: var(--vscode-editor-foreground);">Select Cloud Provider & Region:</h3>
                     
-                    ${providerCards}
+                    ${providerGroupsHtml}
                     
                     <div class="form-group">
                         <label class="form-label" for="tokenInput">🔑 API Token:</label>
@@ -1156,6 +1273,20 @@ export class SettingsPanel {
             <script>
                 const vscode = acquireVsCodeApi();
                 
+                // Stack card selection handling
+                const cards = Array.from(document.querySelectorAll('.stack-card'));
+                
+                function selectCard(el) {
+                    cards.forEach(c => {
+                        const isSel = c === el;
+                        c.classList.toggle('is-selected', isSel);
+                        c.setAttribute('aria-pressed', String(isSel));
+                    });
+                    const url = el.getAttribute('data-url');
+                    vscode.postMessage({ type: 'setStackUrl', url });
+                }
+                
+                // Legacy function for backward compatibility
                 function selectProvider(url) {
                     vscode.postMessage({
                         command: 'selectProvider',
@@ -1301,6 +1432,17 @@ export class SettingsPanel {
                     }, timeout);
                 }
                 
+                // Stack card event listeners
+                cards.forEach(btn => {
+                    btn.addEventListener('click', () => selectCard(btn));
+                    btn.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            selectCard(btn);
+                        }
+                    });
+                });
+                
                 // Alternative click handler setup
                 document.addEventListener('DOMContentLoaded', function() {
                     console.log('DOM loaded');
@@ -1323,6 +1465,12 @@ export class SettingsPanel {
                     switch (message.command) {
                         case 'showMessage':
                             showMessage(message.type, message.text, message.container);
+                            break;
+                        case 'stackSaved':
+                            const banner = document.querySelector('.current-banner');
+                            if (banner && message.html) {
+                                banner.innerHTML = message.html;
+                            }
                             break;
                     }
                 });
