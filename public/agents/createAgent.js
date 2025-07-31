@@ -42,9 +42,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load settings and tools on page load
+    // Load settings, tools, and presets on page load
     vscode.postMessage({ command: 'getSettings' });
     vscode.postMessage({ command: 'getAvailableTools' });
+    vscode.postMessage({ command: 'getPresets' });
 
     // Message listener
     window.addEventListener('message', event => {
@@ -62,6 +63,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'toolsLoaded':
                 handleToolsLoaded(message.data);
+                break;
+            case 'presetsLoaded':
+                handlePresetsLoaded(message.data);
+                break;
+            case 'presetSelected':
+                handlePresetSelected(message.data);
                 break;
         }
     });
@@ -87,7 +94,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 rateLimitPerMin: parseInt(document.getElementById('rateLimit').value) || 10,
                 piiHandling: document.getElementById('piiHandling').value,
                 escalationOnViolation: 'pause'
-            }
+            },
+            presetId: getSelectedPresetId()
         };
     }
 
@@ -207,5 +215,131 @@ document.addEventListener('DOMContentLoaded', function() {
     function showError(message) {
         // Could implement a toast notification here
         console.error('Error:', message);
+    }
+
+    function handlePresetsLoaded(presets) {
+        const presetsList = document.getElementById('presetsList');
+        presetsList.innerHTML = '';
+        
+        presets.forEach(preset => {
+            const presetItem = document.createElement('div');
+            presetItem.className = 'preset-item';
+            presetItem.setAttribute('data-preset-id', preset.id);
+            presetItem.innerHTML = `
+                <div class="preset-header">
+                    <div class="preset-icon">${getPresetIcon(preset.icon)}</div>
+                    <div class="preset-info">
+                        <div class="preset-name">${preset.name}</div>
+                        <div class="preset-description">${preset.shortDescription}</div>
+                    </div>
+                    <div class="preset-select">
+                        <input type="radio" name="preset" value="${preset.id}" id="preset_${preset.id}">
+                    </div>
+                </div>
+            `;
+            
+            // Add click handler for the entire preset item
+            presetItem.addEventListener('click', () => {
+                document.getElementById(`preset_${preset.id}`).checked = true;
+                selectPreset(preset.id);
+            });
+            
+            presetsList.appendChild(presetItem);
+        });
+    }
+
+    function handlePresetSelected(preset) {
+        // Pre-fill form with preset data
+        if (preset.defaultConfig) {
+            if (preset.defaultConfig.name) {
+                document.getElementById('agentName').value = preset.defaultConfig.name;
+            }
+            if (preset.defaultConfig.goal) {
+                document.getElementById('agentGoal').value = preset.defaultConfig.goal;
+            }
+            if (preset.defaultConfig.systemPrompt) {
+                document.getElementById('systemPrompt').value = preset.defaultConfig.systemPrompt;
+            }
+            if (preset.defaultConfig.selectedLLM) {
+                document.getElementById('selectedLLM').value = preset.defaultConfig.selectedLLM;
+            }
+            if (preset.defaultConfig.budgetUSD) {
+                document.getElementById('budgetUSD').value = preset.defaultConfig.budgetUSD;
+            }
+            if (preset.defaultConfig.tokenBudget) {
+                document.getElementById('tokenBudget').value = preset.defaultConfig.tokenBudget;
+            }
+            if (preset.defaultConfig.timeLimitSec) {
+                document.getElementById('timeLimit').value = preset.defaultConfig.timeLimitSec;
+            }
+            if (preset.defaultConfig.contactPolicy) {
+                document.getElementById('contactPolicy').value = preset.defaultConfig.contactPolicy;
+            }
+            if (preset.defaultConfig.hitlTimeoutSec) {
+                document.getElementById('hitlTimeout').value = preset.defaultConfig.hitlTimeoutSec;
+            }
+            if (preset.defaultConfig.hitlFallback) {
+                document.getElementById('hitlFallback').value = preset.defaultConfig.hitlFallback;
+            }
+        }
+
+        // Apply policy settings
+        if (preset.defaultPolicy) {
+            document.getElementById('maxConcurrentTools').value = preset.defaultPolicy.maxConcurrentTools;
+            document.getElementById('rateLimit').value = preset.defaultPolicy.rateLimitPerMin;
+            document.getElementById('piiHandling').value = preset.defaultPolicy.piiHandling;
+        }
+
+        // Show planned steps preview
+        showPlannedStepsPreview(preset.plannedSteps);
+    }
+
+    function selectPreset(presetId) {
+        vscode.postMessage({
+            command: 'selectPreset',
+            data: { presetId: presetId }
+        });
+    }
+
+    function getSelectedPresetId() {
+        const selectedPreset = document.querySelector('input[name="preset"]:checked');
+        return selectedPreset ? selectedPreset.value : null;
+    }
+
+    function getPresetIcon(iconName) {
+        const iconMap = {
+            'shield-check': '🛡️',
+            'stethoscope': '🏥',
+            'code': '💻',
+            'graph': '📊',
+            'pipeline': '🔧'
+        };
+        return iconMap[iconName] || '🤖';
+    }
+
+    function showPlannedStepsPreview(plannedSteps) {
+        const previewDiv = document.getElementById('presetPreview');
+        const stepsPreview = document.getElementById('plannedStepsPreview');
+        
+        if (plannedSteps && plannedSteps.length > 0) {
+            let stepsHtml = '';
+            plannedSteps.forEach((step, index) => {
+                const hitlMarker = step.kind === 'message' ? ' <span class="hitl-marker">HITL</span>' : '';
+                stepsHtml += `
+                    <div class="planned-step">
+                        <div class="step-number">${index + 1}</div>
+                        <div class="step-content">
+                            <div class="step-title">${step.title}${hitlMarker}</div>
+                            <div class="step-type">${step.kind}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            stepsPreview.innerHTML = stepsHtml;
+            previewDiv.style.display = 'block';
+        } else {
+            previewDiv.style.display = 'none';
+        }
     }
 }); 

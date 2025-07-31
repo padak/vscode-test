@@ -3,6 +3,7 @@ import { AgentId, AgentConfig, AgentRunState, AgentStatus, PlannedStep, HITLRequ
 import { AgentStore } from './AgentStore';
 import { AgentTraces } from './AgentTraces';
 import { PolicyEnforcer } from './AgentPolicy';
+import { getPreset } from './presets/agents';
 
 export class AgentRuntime {
     private store: AgentStore;
@@ -48,9 +49,23 @@ export class AgentRuntime {
         const plannedSteps = this.generatePlannedSteps(config);
         await this.store.updateState(agentId, { plannedSteps });
 
+        // Apply preset if specified
+        if (config.presetId) {
+            await this.applyPresetPlanIfEmpty(agentId, config.presetId, plannedSteps);
+        }
+
         // Emit start trace
         const startTrace = AgentTraces.createAgentStartEvent(config, runState);
         await this.store.saveTrace(agentId, startTrace);
+
+        // Emit preset selected trace if applicable
+        if (config.presetId) {
+            const preset = getPreset(config.presetId);
+            if (preset) {
+                const presetTrace = AgentTraces.createPresetSelectedEvent(config.presetId, preset.name);
+                await this.store.saveTrace(agentId, presetTrace);
+            }
+        }
 
         // Start tick interval
         const tickInterval = setInterval(async () => {
@@ -491,6 +506,43 @@ export class AgentRuntime {
     stopAll(): void {
         for (const agentId of this.runningAgents.keys()) {
             this.stopAgent(agentId);
+        }
+    }
+
+    private async applyPresetPlanIfEmpty(agentId: AgentId, presetId: string, currentSteps: PlannedStep[]): Promise<void> {
+        const preset = getPreset(presetId);
+        if (!preset) {
+            return;
+        }
+
+        // If no user-defined steps were provided, use preset steps
+        if (currentSteps.length <= 1) { // Only the default "analyze goal" step
+            const presetSteps = [...preset.plannedSteps]; // Copy to avoid mutation
+            
+            // Ensure at least one HITL step if preset contains one
+            const hasHITLStep = presetSteps.some(step => step.kind === 'message');
+            if (hasHITLStep && this.settings.enableSimulatedEvents) {
+                // Mark HITL steps as waiting
+                presetSteps.forEach(step => {
+                    if (step.kind === 'message') {
+                        step.title += ' (HITL)';
+                    }
+                });
+            }
+
+            await this.store.updateState(agentId, { plannedSteps: presetSteps });
+
+            // Seed progress/metrics counters for the chosen preset
+            if (preset.defaultMetrics) {
+                const metrics = preset.defaultMetrics.reduce((acc, metric) => {
+                    acc[metric] = 0;
+                    return acc;
+                }, {} as Record<string, number>);
+                
+                // Store metrics in run state (this would need to be added to AgentRunState type)
+                // For now, we'll just log them
+                console.log(`Seeded metrics for preset ${presetId}:`, metrics);
+            }
         }
     }
 } 

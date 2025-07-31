@@ -226,4 +226,151 @@ small {
 .cost-value {
     font-weight: 500;
     color: var(--vscode-foreground);
+}
+
+/* Preset Styles */
+.presets-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.preset-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--vscode-editor-background);
+}
+
+.preset-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+}
+
+.preset-item:last-child {
+    margin-bottom: 0;
+}
+
+.preset-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.preset-icon {
+    font-size: 24px;
+    margin-right: 12px;
+    width: 40px;
+    text-align: center;
+}
+
+.preset-info {
+    flex: 1;
+    margin-right: 12px;
+}
+
+.preset-name {
+    font-weight: 600;
+    color: var(--vscode-editor-foreground);
+    margin-bottom: 4px;
+}
+
+.preset-description {
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.preset-select {
+    margin-left: auto;
+}
+
+.preset-select input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.help-text {
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.preset-preview {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    background-color: var(--vscode-editor-background);
+}
+
+.preset-preview h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--vscode-editor-foreground);
+}
+
+.planned-steps-preview {
+    margin-top: 10px;
+}
+
+.planned-step {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.planned-step:last-child {
+    border-bottom: none;
+}
+
+.step-number {
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-title {
+    font-weight: 500;
+    color: var(--vscode-editor-foreground);
+    margin-bottom: 2px;
+}
+
+.step-type {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hitl-marker {
+    background-color: var(--vscode-textPreformat-background);
+    color: var(--vscode-textPreformat-foreground);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 6px;
 } 

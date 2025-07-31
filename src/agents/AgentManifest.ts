@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { AgentManifest, AgentConfig, AgentRunState, AgentPolicy, MCPToolRef } from './types';
+import { getPreset } from './presets/agents';
 
 export class AgentManifestBuilder {
     private config: AgentConfig;
@@ -32,6 +33,20 @@ export class AgentManifestBuilder {
         const seed = this.generateSeed();
         const costSummary = this.calculateCostSummary();
 
+        // Include preset information if available
+        let preset = undefined;
+        if (this.config.presetId) {
+            const presetData = getPreset(this.config.presetId);
+            if (presetData) {
+                preset = {
+                    id: presetData.id,
+                    name: presetData.name,
+                    version: '1.0',
+                    plannedSteps: presetData.plannedSteps
+                };
+            }
+        }
+
         return {
             runId,
             createdAt: this.runState.createdAt,
@@ -52,7 +67,8 @@ export class AgentManifestBuilder {
             seed,
             snapshot: this.runState,
             artifacts: this.artifacts,
-            costSummary
+            costSummary,
+            preset
         };
     }
 

@@ -354,6 +354,20 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    // Create Agent from Preset command
+    const createFromPresetCmd = vscode.commands.registerCommand('keboola.agents.createFromPreset', async () => {
+        if (!agentStore || !agentRuntime) {
+            vscode.window.showErrorMessage('Agents system not initialized');
+            return;
+        }
+        
+        try {
+            CreateAgentPanel.createOrShow(context.extensionUri, context, agentStore, agentRuntime);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to open agent creation panel: ${error}`);
+        }
+    });
+
     // Toggle simulated events command
     const toggleSimulatedEventsCmd = vscode.commands.registerCommand('keboola.agents.toggleSimulatedEvents', async () => {
         const currentSetting = context.globalState.get<boolean>('keboola.agents.enableSimulatedEvents') ?? false;
@@ -389,6 +403,7 @@ function registerCommands(context: vscode.ExtensionContext) {
         unwatchTableCmd,
         createAgentCmd,
         createDemoAgentCmd,
+        createFromPresetCmd,
         toggleSimulatedEventsCmd
     );
 }

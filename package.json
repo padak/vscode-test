@@ -2,7 +2,7 @@
 	"name": "keboola-data-engineering-booster",
 	"displayName": "Keboola Data Engineering Booster",
 	"description": "Comprehensive Keboola project management: explore storage, manage configurations across branches, and monitor job execution",
-	"version": "4.0.0",
+	"version": "4.0.1",
 	"publisher": "keboola",
 	"icon": "media/keboola_blue.png",
 	"engines": {
@@ -129,6 +129,11 @@
 				"command": "keboola.agents.createDemo",
 				"title": "Create Demo Agent",
 				"icon": "$(rocket)"
+			},
+			{
+				"command": "keboola.agents.createFromPreset",
+				"title": "Create Agent from Preset",
+				"icon": "$(library)"
 			},
 			{
 				"command": "keboola.agents.start",
@@ -421,6 +426,10 @@
 			{
 				"command": "keboola.agents.createDemo",
 				"title": "Keboola: Create Demo Agent"
+			},
+			{
+				"command": "keboola.agents.createFromPreset",
+				"title": "Keboola: Create Agent from Preset"
 			}
 			]
 		},

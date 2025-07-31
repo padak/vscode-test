@@ -1,4 +1,5 @@
 export type AgentId = string;
+export type PresetId = string;
 export type AgentStatus = 'starting' | 'running' | 'waiting_hitl' | 'paused' | 'completed' | 'failed';
 
 export interface AgentConfig {
@@ -17,6 +18,7 @@ export interface AgentConfig {
     hitlTimeoutSec: number;
     hitlFallback: 'pause' | 'continue_safe' | 'stop';
     policy: AgentPolicy;            // guardrails
+    presetId?: PresetId;            // optional preset identifier
 }
 
 export interface AgentPolicy {
@@ -106,6 +108,12 @@ export interface AgentManifest {
         usd: number;
         toolCalls: Record<string, number>;
     };
+    preset?: {
+        id: PresetId;
+        name: string;
+        version: string;
+        plannedSteps: PlannedStep[];
+    };
 }
 
 export interface AgentReport {
@@ -124,6 +132,8 @@ export interface AgentReport {
     };
     learnings: string[];
     artifacts: string[];
+    presetId?: PresetId;
+    presetMetrics?: Record<string, number>;
 }
 
 export interface AgentSettings {
@@ -156,6 +166,18 @@ export interface PolicyViolation {
 }
 
 import * as vscode from 'vscode';
+
+export interface AgentPreset {
+    id: PresetId;
+    name: string;
+    shortDescription: string;
+    longDescription?: string;
+    icon?: string;
+    defaultConfig: Partial<AgentConfig>;
+    defaultPolicy: AgentPolicy;
+    plannedSteps: PlannedStep[];
+    defaultMetrics?: string[];
+}
 
 export interface AgentStoreEvents {
     onDidChangeRuns: vscode.Event<void>;

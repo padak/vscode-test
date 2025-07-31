@@ -333,4 +333,12 @@ export class AgentTraces {
 
         return summary;
     }
+
+    static createPresetSelectedEvent(presetId: string, presetName: string): TraceEvent {
+        return this.createTraceEvent('agent.preset_selected', undefined, {
+            'preset.id': presetId,
+            'preset.name': presetName,
+            'preset.version': '1.0'
+        });
+    }
 } 

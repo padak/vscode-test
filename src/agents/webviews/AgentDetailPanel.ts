@@ -310,6 +310,19 @@ export class AgentDetailPanel {
                 const elapsedTime = this.calculateElapsedTime(runState.createdAt);
                 const remainingBudget = config.budgetUSD - runState.spentUSD;
                 
+                // Get preset information if available
+                let presetInfo = null;
+                if (config.presetId) {
+                    const { getPreset } = await import('../presets/agents');
+                    const preset = getPreset(config.presetId);
+                    if (preset) {
+                        presetInfo = {
+                            id: preset.id,
+                            name: preset.name
+                        };
+                    }
+                }
+                
                 this._panel.webview.postMessage({
                     command: 'updateState',
                     data: {
@@ -317,7 +330,8 @@ export class AgentDetailPanel {
                         config,
                         elapsedTime,
                         remainingBudget,
-                        isRunning: this.runtime.isRunning(this._agentId)
+                        isRunning: this.runtime.isRunning(this._agentId),
+                        preset: presetInfo
                     }
                 });
             }
@@ -354,6 +368,9 @@ export class AgentDetailPanel {
             <h1 id="agentName">Agent: ${this._agentId}</h1>
             <div class="status-badge" id="statusBadge">
                 <span id="statusText">Loading...</span>
+            </div>
+            <div class="preset-badge" id="presetBadge" style="display: none;">
+                <span id="presetText"></span>
             </div>
         </div>
 

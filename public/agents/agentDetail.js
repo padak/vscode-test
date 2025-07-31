@@ -93,10 +93,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function updateAgentState(data) {
-        const { runState, config, elapsedTime, remainingBudget, isRunning } = data;
+        const { runState, config, elapsedTime, remainingBudget, isRunning, preset } = data;
         
         // Update agent name
         document.getElementById('agentName').textContent = config.name || 'Agent';
+        
+        // Update preset badge if available
+        const presetBadge = document.getElementById('presetBadge');
+        const presetText = document.getElementById('presetText');
+        
+        if (preset && preset.name) {
+            presetText.textContent = preset.name;
+            presetBadge.style.display = 'inline-block';
+        } else {
+            presetBadge.style.display = 'none';
+        }
         
         // Update status
         const statusText = document.getElementById('statusText');

@@ -215,6 +215,44 @@ export const t = {
     unit_calls: 'calls',
     unit_percent: '%',
     
+    // Presets
+    presets_title: 'Data Agent Presets',
+    presets_help: 'Choose a preset to pre-fill the agent configuration with recommended settings for common data engineering tasks.',
+    presets_select: 'Select Preset',
+    presets_none: 'No Preset',
+    presets_selected: 'Preset Selected',
+    presets_preview_steps: 'Planned Steps Preview',
+    presets_preview_steps_help: 'These steps will be automatically planned when you start the agent.',
+    
+    // Individual Presets
+    presets_dq_sentinel_name: 'Data Quality Sentinel',
+    presets_dq_sentinel_short: 'Checks schema drift, nulls/dupes, freshness; produces a DQ report',
+    presets_dq_sentinel_long: 'Automated data quality monitoring that analyzes your data for common issues like schema drift, null values, duplicates, and data freshness. Generates comprehensive quality reports with actionable insights.',
+    
+    presets_ingestion_doctor_name: 'Ingestion Doctor',
+    presets_ingestion_doctor_short: 'Diagnoses failed extractors; suggests safe config fixes; validates re-run',
+    presets_ingestion_doctor_long: 'Intelligent troubleshooting for failed data ingestion jobs. Analyzes error patterns, suggests configuration fixes, and validates solutions before implementation.',
+    
+    presets_sql_coach_name: 'SQL Refactor & Test Coach',
+    presets_sql_coach_short: 'Refactors SQL, generates tests, compares before/after; outputs patch and tests',
+    presets_sql_coach_long: 'Advanced SQL optimization and testing assistant. Refactors complex queries, generates comprehensive tests, and provides before/after comparisons with detailed performance analysis.',
+    
+    presets_cost_lineage_name: 'Cost & Lineage Analyst',
+    presets_cost_lineage_short: 'Maps lineage, detects hot-spots, estimates cost; recommends schedule/caching changes',
+    presets_cost_lineage_long: 'Comprehensive cost and lineage analysis tool that maps data dependencies, identifies performance bottlenecks, and provides optimization recommendations for scheduling and caching strategies.',
+    
+    presets_pipeline_builder_name: 'Use-Case Pipeline Builder',
+    presets_pipeline_builder_short: 'Scaffolds a new pipeline: configs, flow.yaml, starter tests/docs',
+    presets_pipeline_builder_long: 'Intelligent pipeline scaffolding tool that creates complete data pipeline structures including configurations, flow definitions, tests, and documentation based on use case requirements.',
+    
+    // Create Agent Preset Section
+    create_preset_title: 'Preset',
+    create_preset_help: 'Choose a preset to get started quickly with recommended settings',
+    create_preset_selected_badge: 'Preset Selected',
+    create_preset_preview_title: 'Planned Steps Preview',
+    create_preset_preview_help: 'These steps will be automatically planned when you start the agent. You can modify them later.',
+    create_preset_hitl_marker: 'HITL',
+    
     // Common
     common_yes: 'Yes',
     common_no: 'No',

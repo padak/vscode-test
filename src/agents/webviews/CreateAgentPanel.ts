@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { AgentConfig, AgentPolicy, MCPToolRef, CredentialRef, AgentSettings } from '../types';
+import { AgentConfig, AgentPolicy, MCPToolRef, CredentialRef, AgentSettings, PresetId } from '../types';
 import { t } from '../i18n/en';
 import { PolicyValidator } from '../AgentPolicy';
+import { getAllPresets, getPreset } from '../presets/agents';
 
 export class CreateAgentPanel {
     public static currentPanel: CreateAgentPanel | undefined;
@@ -74,6 +75,12 @@ export class CreateAgentPanel {
                         break;
                     case 'getAvailableTools':
                         await this.handleGetAvailableTools();
+                        break;
+                    case 'getPresets':
+                        await this.handleGetPresets();
+                        break;
+                    case 'selectPreset':
+                        await this.handleSelectPreset(message.data);
                         break;
                 }
             },
@@ -154,6 +161,24 @@ export class CreateAgentPanel {
         });
     }
 
+    private async handleGetPresets() {
+        const presets = getAllPresets();
+        this._panel.webview.postMessage({
+            command: 'presetsLoaded',
+            data: presets
+        });
+    }
+
+    private async handleSelectPreset(data: { presetId: PresetId }) {
+        const preset = getPreset(data.presetId);
+        if (preset) {
+            this._panel.webview.postMessage({
+                command: 'presetSelected',
+                data: preset
+            });
+        }
+    }
+
     private buildAgentConfig(data: any): AgentConfig {
         const policy = PolicyValidator.mergeWithDefaults(data.policy || {});
         
@@ -172,7 +197,8 @@ export class CreateAgentPanel {
             contactPolicy: data.contactPolicy || 'notify',
             hitlTimeoutSec: data.hitlTimeoutSec || 300,
             hitlFallback: data.hitlFallback || 'pause',
-            policy
+            policy,
+            presetId: data.presetId
         };
     }
 
@@ -255,7 +281,8 @@ export class CreateAgentPanel {
         <h1>${t.create_title}</h1>
         
         <div class="tabs">
-            <button class="tab-button active" data-tab="goal">${t.tab_goal_prompt}</button>
+            <button class="tab-button active" data-tab="preset">${t.create_preset_title}</button>
+            <button class="tab-button" data-tab="goal">${t.tab_goal_prompt}</button>
             <button class="tab-button" data-tab="models">${t.tab_models}</button>
             <button class="tab-button" data-tab="tools">${t.tab_tools}</button>
             <button class="tab-button" data-tab="credentials">${t.tab_credentials}</button>
@@ -265,8 +292,26 @@ export class CreateAgentPanel {
         </div>
 
         <div class="tab-content">
+            <!-- Preset Tab -->
+            <div id="preset" class="tab-pane active">
+                <div class="form-group">
+                    <label>${t.presets_title}</label>
+                    <p class="help-text">${t.presets_help}</p>
+                    <div id="presetsList" class="presets-list">
+                        <!-- Presets will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div id="presetPreview" class="preset-preview" style="display: none;">
+                    <h3>${t.create_preset_preview_title}</h3>
+                    <p class="help-text">${t.create_preset_preview_help}</p>
+                    <div id="plannedStepsPreview" class="planned-steps-preview">
+                        <!-- Planned steps will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Goal & Prompt Tab -->
-            <div id="goal" class="tab-pane active">
+            <div id="goal" class="tab-pane">
                 <div class="form-group">
                     <label for="agentName">${t.create_name_label}</label>
                     <input type="text" id="agentName" placeholder="${t.create_name_placeholder}">
