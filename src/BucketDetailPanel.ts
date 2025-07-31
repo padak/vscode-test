@@ -60,13 +60,13 @@ export class BucketDetailPanel {
             async (message) => {
                 switch (message.command) {
                     case 'exportBucket':
-                        await this.handleExportBucket(bucketDetail);
+                        await this.handleExportBucket(this.currentBucketDetail);
                         break;
                     case 'exportBucketSchema':
-                        await this.handleExportBucketSchema(bucketDetail);
+                        await this.handleExportBucketSchema(this.currentBucketDetail);
                         break;
                     case 'refreshData':
-                        await this.handleRefreshData(bucketDetail);
+                        await this.handleRefreshData(this.currentBucketDetail);
                         break;
                 }
             },
@@ -78,7 +78,10 @@ export class BucketDetailPanel {
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
     }
 
+    private currentBucketDetail!: KeboolaBucketDetail;
+
     private updateContent(bucketDetail: KeboolaBucketDetail): void {
+        this.currentBucketDetail = bucketDetail;
         this.panel.title = `Bucket: ${bucketDetail.displayName}`;
         this.panel.webview.html = this.getWebviewContent(bucketDetail);
     }
@@ -471,7 +474,7 @@ export class BucketDetailPanel {
                     <div class="export-settings">
                         <div class="settings-row">
                             <span class="setting-label">Export folder:</span>
-                            <span class="setting-value">${this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</span>
+                            <span class="setting-value">${this.context?.globalState.get<string>('keboola.exportFolderName') || 'data'}</span>
                         </div>
                         <div class="settings-row">
                             <span class="setting-label">Export limit:</span>
@@ -486,7 +489,7 @@ export class BucketDetailPanel {
                             <span class="setting-value">${this.context?.globalState.get<boolean>('keboola.useShortTableNames') ?? false ? 'Short' : 'Full'}</span>
                         </div>
                         <div class="settings-note">
-                            <small>💡 Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong>/${bucketDetail.stage}/${bucketDetail.id.split('.').slice(1).join('.')}/</small>
+                            <small>💡 Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context?.globalState.get<string>('keboola.exportFolderName') || 'data'}</strong>/${bucketDetail.stage}/${bucketDetail.id.split('.').slice(1).join('.')}/</small>
                         </div>
                     </div>
                 </div>
@@ -606,7 +609,7 @@ export class BucketDetailPanel {
             };
 
             // Construct workspace export path for schema
-            const exportFolderName = this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+            const exportFolderName = this.context?.globalState.get<string>('keboola.exportFolderName') || 'data';
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!workspaceRoot) {
                 vscode.window.showErrorMessage('No workspace folder found. Please open a workspace to export metadata.');

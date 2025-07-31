@@ -322,7 +322,14 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ---
 
-## 🔄 **What's New in Version 3.1.2**
+## 🔄 **What's New in Version 4.0.2**
+
+### 🐛 **Version 4.0.2 - Bucket Detail Panel Fix**
+#### 🔧 **Critical Bug Fix**
+- **🔧 Fixed Bucket Export**: Resolved issue where bucket detail panel would export wrong bucket after switching tabs
+- **🔄 Panel State Management**: Fixed message handler to properly track current bucket when reusing existing panels
+- **📊 Export Accuracy**: Bucket export now correctly exports the currently displayed bucket, not the originally opened bucket
+- **🎯 User Experience**: Seamless bucket switching without losing export functionality
 
 ### 🚀 **Version 3.1.0 - Jobs Monitoring System**
 #### 🆕 **Major New Features**
