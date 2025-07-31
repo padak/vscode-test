@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { KeboolaApi, KeboolaApiError } from './keboolaApi';
+import { isKbcCliAvailable } from './kbcCli';
 
 interface CloudProvider {
     id: string;
@@ -150,6 +151,9 @@ export class SettingsPanel {
                         break;
                     case 'testConnection':
                         await this.handleTestConnection();
+                        break;
+                    case 'systemCheck':
+                        await this.handleSystemCheck();
                         break;
                 }
             },
@@ -402,6 +406,223 @@ export class SettingsPanel {
                 text: `❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
+    }
+
+    private async handleSystemCheck(): Promise<void> {
+        try {
+            const results = await this.performSystemCheck();
+            await this.showSystemCheckResults(results);
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `System check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    private async performSystemCheck(): Promise<{
+        kbcCli: { available: boolean; version?: string; error?: string };
+        nodeVersion: { available: boolean; version?: string; error?: string };
+        vscodeVersion: { available: boolean; version?: string; error?: string };
+    }> {
+        const results: {
+            kbcCli: { available: boolean; version?: string; error?: string };
+            nodeVersion: { available: boolean; version?: string; error?: string };
+            vscodeVersion: { available: boolean; version?: string; error?: string };
+        } = {
+            kbcCli: { available: false },
+            nodeVersion: { available: false },
+            vscodeVersion: { available: false }
+        };
+
+        // Check Keboola CLI
+        try {
+            const kbcAvailable = await isKbcCliAvailable();
+            results.kbcCli.available = kbcAvailable;
+            if (kbcAvailable) {
+                results.kbcCli.version = 'Available';
+            } else {
+                results.kbcCli.error = 'Keboola CLI not found in PATH';
+            }
+        } catch (error) {
+            results.kbcCli.error = error instanceof Error ? error.message : 'Unknown error';
+        }
+
+        // Check Node.js version
+        try {
+            const nodeVersion = process.version;
+            results.nodeVersion.available = true;
+            results.nodeVersion.version = nodeVersion;
+        } catch (error) {
+            results.nodeVersion.error = error instanceof Error ? error.message : 'Unknown error';
+        }
+
+        // Check VSCode version
+        try {
+            const vscodeVersion = vscode.version;
+            results.vscodeVersion.available = true;
+            results.vscodeVersion.version = vscodeVersion;
+        } catch (error) {
+            results.vscodeVersion.error = error instanceof Error ? error.message : 'Unknown error';
+        }
+
+        return results;
+    }
+
+    private async showSystemCheckResults(results: {
+        kbcCli: { available: boolean; version?: string; error?: string };
+        nodeVersion: { available: boolean; version?: string; error?: string };
+        vscodeVersion: { available: boolean; version?: string; error?: string };
+    }): Promise<void> {
+        const panel = vscode.window.createWebviewPanel(
+            'systemCheckResults',
+            'System Check Results',
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        const getStatusIcon = (available: boolean) => available ? '✅' : '❌';
+        const getStatusColor = (available: boolean) => available ? 'green' : 'red';
+
+        const content = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>System Check Results</title>
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        margin: 20px;
+                        background-color: var(--vscode-editor-background);
+                        color: var(--vscode-editor-foreground);
+                    }
+                    .header {
+                        border-bottom: 1px solid var(--vscode-panel-border);
+                        padding-bottom: 10px;
+                        margin-bottom: 20px;
+                    }
+                    .check-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border: 1px solid var(--vscode-panel-border);
+                        border-radius: 4px;
+                        background-color: var(--vscode-editor-background);
+                    }
+                    .status-icon {
+                        font-size: 20px;
+                        margin-right: 15px;
+                    }
+                    .check-details {
+                        flex: 1;
+                    }
+                    .check-name {
+                        font-weight: bold;
+                        margin-bottom: 5px;
+                    }
+                    .check-status {
+                        color: var(--vscode-descriptionForeground);
+                    }
+                    .error-message {
+                        color: var(--vscode-errorForeground);
+                        margin-top: 5px;
+                        font-size: 12px;
+                    }
+                    .help-section {
+                        margin-top: 30px;
+                        padding: 15px;
+                        background-color: var(--vscode-textBlockQuote-background);
+                        border-left: 3px solid var(--vscode-textBlockQuote-border);
+                    }
+                    .help-title {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    .help-content {
+                        font-size: 14px;
+                        line-height: 1.4;
+                    }
+                    .code {
+                        background-color: var(--vscode-textCodeBlock-background);
+                        padding: 2px 4px;
+                        border-radius: 3px;
+                        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                        font-size: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>System Check Results</h1>
+                    <p>This check verifies that all required system dependencies are available for the Keboola Data Engineering Booster extension.</p>
+                </div>
+
+                <div class="check-item">
+                    <div class="status-icon">${getStatusIcon(results.kbcCli.available)}</div>
+                    <div class="check-details">
+                        <div class="check-name">Keboola CLI (kbc)</div>
+                        <div class="check-status">
+                            ${results.kbcCli.available ? 'Available' : 'Not found'}
+                            ${results.kbcCli.version ? ` - ${results.kbcCli.version}` : ''}
+                        </div>
+                        ${results.kbcCli.error ? `<div class="error-message">${results.kbcCli.error}</div>` : ''}
+                    </div>
+                </div>
+
+                <div class="check-item">
+                    <div class="status-icon">${getStatusIcon(results.nodeVersion.available)}</div>
+                    <div class="check-details">
+                        <div class="check-name">Node.js</div>
+                        <div class="check-status">
+                            ${results.nodeVersion.available ? 'Available' : 'Not found'}
+                            ${results.nodeVersion.version ? ` - ${results.nodeVersion.version}` : ''}
+                        </div>
+                        ${results.nodeVersion.error ? `<div class="error-message">${results.nodeVersion.error}</div>` : ''}
+                    </div>
+                </div>
+
+                <div class="check-item">
+                    <div class="status-icon">${getStatusIcon(results.vscodeVersion.available)}</div>
+                    <div class="check-details">
+                        <div class="check-name">Visual Studio Code</div>
+                        <div class="check-status">
+                            ${results.vscodeVersion.available ? 'Available' : 'Not found'}
+                            ${results.vscodeVersion.version ? ` - ${results.vscodeVersion.version}` : ''}
+                        </div>
+                        ${results.vscodeVersion.error ? `<div class="error-message">${results.vscodeVersion.error}</div>` : ''}
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-title">Need Help?</div>
+                    <div class="help-content">
+                        <p><strong>Keboola CLI not found?</strong></p>
+                        <p>Install the Keboola CLI by following these steps:</p>
+                        <ol>
+                            <li>Visit the official installation guide: <a href="https://developers.keboola.com/cli/installation/">https://developers.keboola.com/cli/installation/</a></li>
+                            <li>Follow the instructions for your operating system</li>
+                            <li>Verify installation by running: <span class="code">kbc --version</span></li>
+                        </ol>
+                        
+                        <p><strong>Node.js not found?</strong></p>
+                        <p>This is unusual as VSCode extensions require Node.js. Please reinstall VSCode or contact support.</p>
+                        
+                        <p><strong>VSCode version issues?</strong></p>
+                        <p>This extension requires VSCode 1.74.0 or higher. Please update VSCode to the latest version.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        panel.webview.html = content;
     }
 
     private getCurrentSettings(): SettingsData {
@@ -759,6 +980,25 @@ export class SettingsPanel {
         <body>
             <div class="settings-container">
 
+                <!-- System Check Section -->
+                <div class="section">
+                    <h2 class="section-title">🔧 System Check</h2>
+                    <div class="settings-container">
+                        <p style="margin-bottom: 20px; color: var(--vscode-descriptionForeground);">
+                            Verify that all required system dependencies are available for the Keboola Data Engineering Booster extension.
+                        </p>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <button class="button secondary" onclick="systemCheck()" id="systemCheckBtn">🔍 Run System Check</button>
+                        </div>
+                        
+                        <div style="margin-top: 16px; font-size: 12px; color: var(--vscode-descriptionForeground);">
+                            💡 <strong>Keboola CLI:</strong> Required for data export operations<br>
+                            💡 <strong>Node.js:</strong> Required for extension functionality<br>
+                            💡 <strong>VSCode:</strong> Required version 1.74.0 or higher
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="section">
                     <h2 class="section-title">🔌 Connection Settings</h2>
@@ -1017,6 +1257,23 @@ export class SettingsPanel {
                     } catch (error) {
                         console.error('Error in testConnection:', error);
                         showMessage('error', 'Error: ' + error.message);
+                    }
+                }
+                
+                function systemCheck() {
+                    try {
+                        console.log('System Check button clicked');
+                        
+                        if (typeof vscode === 'undefined') {
+                            console.error('VS Code API not available');
+                            return;
+                        }
+                        
+                        vscode.postMessage({
+                            command: 'systemCheck'
+                        });
+                    } catch (error) {
+                        console.error('Error in systemCheck:', error);
                     }
                 }
                 
