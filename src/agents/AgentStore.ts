@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentId, AgentConfig, AgentRunState, AgentStatus, TraceEvent, AgentSettings } from './types';
+import { AgentId, AgentConfig, AgentRunState, AgentStatus, TraceEvent, AgentSettings, ProjectContext } from './types';
+import { agentRunDir, agentsDir } from '../utils/pathBuilder';
 
 export class AgentStore {
     private _onDidChangeRuns = new vscode.EventEmitter<void>();
@@ -16,8 +17,10 @@ export class AgentStore {
 
     private runs = new Map<AgentId, AgentRunState>();
     private dataDir: string;
+    private context: vscode.ExtensionContext;
 
     constructor(context: vscode.ExtensionContext) {
+        this.context = context;
         this.dataDir = this.getDataDir(context);
         this.ensureDataDir();
         this.loadExistingRuns();
@@ -26,7 +29,8 @@ export class AgentStore {
     private getDataDir(context: vscode.ExtensionContext): string {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (workspaceFolders && workspaceFolders.length > 0) {
-            return path.join(workspaceFolders[0].uri.fsPath, '.keboola_agents');
+            // Use the new path structure - get the agents directory
+            return agentsDir(context);
         }
         return path.join(context.globalStorageUri.fsPath, 'agents');
     }
@@ -39,6 +43,11 @@ export class AgentStore {
 
     private loadExistingRuns(): void {
         try {
+            // Check if the agents directory exists
+            if (!fs.existsSync(this.dataDir)) {
+                return;
+            }
+
             const agentDirs = fs.readdirSync(this.dataDir, { withFileTypes: true })
                 .filter(dirent => dirent.isDirectory())
                 .map(dirent => dirent.name);
@@ -62,7 +71,7 @@ export class AgentStore {
 
     async createRun(config: AgentConfig): Promise<AgentId> {
         const agentId = config.id;
-        const agentDir = path.join(this.dataDir, agentId);
+        const agentDir = agentRunDir(this.context, agentId);
         
         // Create agent directory
         if (!fs.existsSync(agentDir)) {
@@ -121,6 +130,8 @@ export class AgentStore {
                 { id: 'mcp://keboola/GenerateReport', name: 'Generate Report' }
             ],
             credentials: [],
+            projects: [],
+            defaultProjectId: 'default',
             budgetUSD: 5.0,
             tokenBudget: 5000,
             timeLimitSec: 1800,
@@ -132,6 +143,7 @@ export class AgentStore {
                 rateLimitPerMin: 10,
                 forbiddenActions: ['delete_table', 'external_http_post'],
                 dataAccessScopes: ['storage.read', 'configs.read'],
+                allowProjects: undefined,
                 piiHandling: 'mask',
                 escalationOnViolation: 'pause'
             }
@@ -154,7 +166,7 @@ export class AgentStore {
         this.runs.set(agentId, updatedState);
 
         // Save to file
-        const runStatePath = path.join(this.dataDir, agentId, 'run_state.json');
+        const runStatePath = path.join(agentRunDir(this.context, agentId), 'run_state.json');
         fs.writeFileSync(runStatePath, JSON.stringify(updatedState, null, 2));
 
         this._onDidUpdateRun.fire(agentId);
@@ -162,13 +174,13 @@ export class AgentStore {
     }
 
     async saveTrace(agentId: AgentId, event: TraceEvent): Promise<void> {
-        const tracesPath = path.join(this.dataDir, agentId, 'traces.ndjson');
+        const tracesPath = path.join(agentRunDir(this.context, agentId), 'traces.ndjson');
         const traceLine = JSON.stringify(event) + '\n';
         fs.appendFileSync(tracesPath, traceLine);
     }
 
     async finalizeRun(agentId: AgentId, report: any): Promise<void> {
-        const agentDir = path.join(this.dataDir, agentId);
+        const agentDir = agentRunDir(this.context, agentId);
         
         // Save report
         const reportPath = path.join(agentDir, 'report.json');
@@ -187,27 +199,27 @@ export class AgentStore {
     }
 
     getAgentDir(agentId: AgentId): string {
-        return path.join(this.dataDir, agentId);
+        return agentRunDir(this.context, agentId);
     }
 
     getTracesPath(agentId: AgentId): string {
-        return path.join(this.dataDir, agentId, 'traces.ndjson');
+        return path.join(agentRunDir(this.context, agentId), 'traces.ndjson');
     }
 
     getArtifactsDir(agentId: AgentId): string {
-        return path.join(this.dataDir, agentId, 'artifacts');
+        return path.join(agentRunDir(this.context, agentId), 'artifacts');
     }
 
     getManifestPath(agentId: AgentId): string {
-        return path.join(this.dataDir, agentId, 'manifest.json');
+        return path.join(agentRunDir(this.context, agentId), 'manifest.json');
     }
 
     getReportPath(agentId: AgentId): string {
-        return path.join(this.dataDir, agentId, 'report.json');
+        return path.join(agentRunDir(this.context, agentId), 'report.json');
     }
 
     getConfigPath(agentId: AgentId): string {
-        return path.join(this.dataDir, agentId, 'config.json');
+        return path.join(agentRunDir(this.context, agentId), 'config.json');
     }
 
     async loadConfig(agentId: AgentId): Promise<AgentConfig | undefined> {
@@ -218,10 +230,66 @@ export class AgentStore {
 
         try {
             const configData = fs.readFileSync(configPath, 'utf8');
-            return JSON.parse(configData);
+            const config = JSON.parse(configData);
+            
+            // Migrate old configs to multi-project format
+            return this.migrateConfigIfNeeded(config);
         } catch (error) {
             console.error(`Failed to load config for agent ${agentId}:`, error);
             return undefined;
+        }
+    }
+
+    private migrateConfigIfNeeded(config: any): AgentConfig {
+        // Check if this is an old config without projects array
+        if (!config.projects) {
+            console.log(`Migrating agent config ${config.id} to multi-project format`);
+            
+            // Get the old single project credentials
+            const oldToken = this.context.globalState.get<string>('keboola.token');
+            const oldApiUrl = this.context.globalState.get<string>('keboola.apiUrl');
+            
+            if (oldToken && oldApiUrl) {
+                // Create default project context
+                const defaultProject: ProjectContext = {
+                    id: 'default',
+                    name: 'Default',
+                    stackUrl: oldApiUrl,
+                    tokenSecretKey: 'keboola.token',
+                    default: true
+                };
+                
+                // Update config with multi-project structure
+                config.projects = [defaultProject];
+                config.defaultProjectId = 'default';
+                
+                // Save the migrated config
+                const configPath = this.getConfigPath(config.id);
+                fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+                
+                // Mark as migrated in run state
+                this.markAsMigrated(config.id);
+            } else {
+                // Fallback if no old credentials found
+                config.projects = [];
+                config.defaultProjectId = 'default';
+            }
+        }
+        
+        return config as AgentConfig;
+    }
+
+    private markAsMigrated(agentId: AgentId): void {
+        const runStatePath = path.join(agentRunDir(this.context, agentId), 'run_state.json');
+        if (fs.existsSync(runStatePath)) {
+            try {
+                const runStateData = fs.readFileSync(runStatePath, 'utf8');
+                const runState = JSON.parse(runStateData);
+                runState.migratedToMultiProject = true;
+                fs.writeFileSync(runStatePath, JSON.stringify(runState, null, 2));
+            } catch (error) {
+                console.error(`Failed to mark agent ${agentId} as migrated:`, error);
+            }
         }
     }
 
@@ -290,7 +358,7 @@ export class AgentStore {
     }
 
     async deleteRun(agentId: AgentId): Promise<void> {
-        const agentDir = path.join(this.dataDir, agentId);
+        const agentDir = agentRunDir(this.context, agentId);
         if (fs.existsSync(agentDir)) {
             fs.rmSync(agentDir, { recursive: true, force: true });
         }

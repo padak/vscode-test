@@ -187,7 +187,7 @@ export class TableDetailPanel {
             };
 
             // Construct workspace export path for schema
-            const exportFolderName = this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+            const exportFolderName = this.context.globalState.get<string>('keboola.exportFolderName') || 'data';
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!workspaceRoot) {
                 vscode.window.showErrorMessage('No workspace folder found. Please open a workspace to export metadata.');
@@ -515,12 +515,12 @@ export class TableDetailPanel {
                     
                     <div class="row-limit-display">
                         📏 <strong>Current Settings:</strong><br>
-                        Export Folder: <strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong> | 
+                        Export Folder: <strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'data'}</strong> | 
                         Preview: <strong>${this.previewRowLimit.toLocaleString()}</strong> rows | 
                         Export: <strong>${this.exportRowLimit === 0 ? 'unlimited' : this.exportRowLimit.toLocaleString()}</strong> rows | 
                         Headers: <strong>${this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true ? 'On' : 'Off'}</strong> | 
                         Table names: <strong>${this.context.globalState.get<boolean>('keboola.useShortTableNames') ?? false ? 'Short' : 'Full'}</strong>
-                        <br><small>Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project'}</strong>/${this.tableDetail.bucket.stage}/${this.tableDetail.bucket.id.split('.').slice(1).join('.')}/</small>
+                        <br><small>Use "Keboola: Settings" to change these defaults. Files exported to: workspace/<strong>${this.context.globalState.get<string>('keboola.exportFolderName') || 'data'}</strong>/${this.tableDetail.bucket.stage}/${this.tableDetail.bucket.id.split('.').slice(1).join('.')}/</small>
                     </div>
                 </div>
 

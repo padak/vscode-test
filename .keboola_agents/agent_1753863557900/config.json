@@ -1,0 +1,34 @@
+{
+  "id": "agent_1753863557900",
+  "name": "Padak",
+  "goal": "",
+  "systemPrompt": "",
+  "selectedLLM": "gpt-4o-mini",
+  "allowedLLMs": [
+    "gpt-4o-mini"
+  ],
+  "allowedTools": [],
+  "credentials": [],
+  "budgetUSD": 10,
+  "tokenBudget": 10000,
+  "timeLimitSec": 3600,
+  "contactPolicy": "notify",
+  "hitlTimeoutSec": 300,
+  "hitlFallback": "pause",
+  "policy": {
+    "maxConcurrentTools": 3,
+    "rateLimitPerMin": 10,
+    "forbiddenActions": [
+      "delete_table",
+      "external_http_post",
+      "write_system_files",
+      "execute_code"
+    ],
+    "dataAccessScopes": [
+      "storage.read",
+      "configs.read"
+    ],
+    "piiHandling": "mask",
+    "escalationOnViolation": "pause"
+  }
+}

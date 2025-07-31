@@ -5,6 +5,23 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.4] - 2025-08-01
+
+### 🆕 Added
+- **Multi-Project Credentials for AI Agents**: AI agents can now operate across multiple Keboola projects simultaneously
+- **Project Credentials Management**: Add, edit, and remove project credentials with secure token storage in VS Code SecretStorage
+- **Project Selection in Agents**: Choose which projects agents can access with per-project permissions
+- **Automatic Migration**: Existing single-project agents are automatically migrated to multi-project format
+- **Project Context in Tool Calls**: Agents can specify which project to use for each tool call
+- **Project Guardrails**: Policy-based restrictions on which projects agents can access
+- **Enhanced Settings Panel**: New multi-project credentials management section in Settings
+
+### 🔧 Enhanced
+- **Agent Configuration Schema**: Added `projects[]` and `defaultProjectId` fields to AgentConfig
+- **Backward Compatibility**: Existing single-project agents continue to work without changes
+- **Token Security**: Project tokens stored securely with proper encryption
+- **Connection Testing**: Verify project credentials before adding them to the system
+
 ## [4.0.2] - 2025-08-01
 
 ### 🐛 Fixed

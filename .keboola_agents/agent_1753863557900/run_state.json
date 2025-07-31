@@ -1,0 +1,52 @@
+{
+  "id": "agent_1753863557900",
+  "status": "paused",
+  "createdAt": "2025-07-30T08:19:17.901Z",
+  "updatedAt": "2025-07-30T08:20:17.995Z",
+  "progressPct": 25,
+  "confidencePct": 27.724951617134522,
+  "spentUSD": 0.00006494999999999999,
+  "spentTokens": 433,
+  "toolCalls": {},
+  "currentStepIndex": 1,
+  "plannedSteps": [
+    {
+      "id": "step_1",
+      "title": "Analyzing requirements (step 1)",
+      "kind": "thought",
+      "estTokens": 255,
+      "estUSD": 0.028217265487426247
+    },
+    {
+      "id": "step_2",
+      "title": "Querying storage data (step 2)",
+      "kind": "tool",
+      "toolId": "QueryStorage",
+      "estTokens": 133,
+      "estUSD": 0.024866013105107544
+    },
+    {
+      "id": "step_3",
+      "title": "Analyzing data patterns (step 3)",
+      "kind": "tool",
+      "toolId": "AnalyzeData",
+      "estTokens": 103,
+      "estUSD": 0.03575677131204733
+    },
+    {
+      "id": "step_4",
+      "title": "Validating results (step 4)",
+      "kind": "check",
+      "estTokens": 299,
+      "estUSD": 0.09843776639424776
+    }
+  ],
+  "hitlRequests": [
+    {
+      "id": "hitl_1753863617993",
+      "createdAt": "2025-07-30T08:20:17.993Z",
+      "question": "Should the agent proceed with: Analyzing requirements (step 1)?",
+      "status": "pending"
+    }
+  ]
+}

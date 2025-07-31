@@ -17,6 +17,7 @@ import { AgentStore } from './agents/AgentStore';
 import { AgentRuntime } from './agents/AgentRuntime';
 import { CreateAgentPanel } from './agents/webviews/CreateAgentPanel';
 import { AgentDetailPanel } from './agents/webviews/AgentDetailPanel';
+import { migrateSettings, migrateLegacyAgentRuns } from './utils/pathBuilder';
 
 let keboolaApi: KeboolaApi | undefined;
 let keboolaTreeProvider: KeboolaTreeProvider;
@@ -36,6 +37,13 @@ export function activate(context: vscode.ExtensionContext) {
     // Create output channel for logging
     outputChannel = vscode.window.createOutputChannel('Keboola Storage Explorer');
     context.subscriptions.push(outputChannel);
+
+    // Migrate settings and legacy agent runs
+    migrateSettings(context).then(() => {
+        return migrateLegacyAgentRuns(context);
+    }).catch(error => {
+        console.error('Failed to migrate settings or agent runs:', error);
+    });
 
     // Initialize tree providers
     keboolaTreeProvider = new KeboolaTreeProvider();

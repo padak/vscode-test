@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { KeboolaApi, KeboolaApiError } from './keboolaApi';
 import { isKbcCliAvailable } from './kbcCli';
+import { ProjectManager, ProjectCredential } from './ProjectManager';
 
 interface CloudProvider {
     id: string;
@@ -26,6 +27,9 @@ interface SettingsData {
     watchEnabled: boolean;
     watchIntervalSec: number;
     autoDownload: boolean;
+    // New agent settings
+    rootFolder: string;
+    agentsFolder: string;
 }
 
 export class SettingsPanel {
@@ -33,6 +37,7 @@ export class SettingsPanel {
     private readonly panel: vscode.WebviewPanel;
     private disposables: vscode.Disposable[] = [];
     private readonly context: vscode.ExtensionContext;
+    private readonly projectManager: ProjectManager;
 
     private readonly cloudProviders: CloudProvider[] = [
         {
@@ -127,6 +132,7 @@ export class SettingsPanel {
     ) {
         this.panel = panel;
         this.context = context;
+        this.projectManager = new ProjectManager(context);
 
         this.updateContent();
 
@@ -146,6 +152,9 @@ export class SettingsPanel {
                     case 'saveWatcherSettings':
                         await this.handleWatcherSettingsSave(message.watchEnabled, message.watchIntervalSec, message.autoDownload);
                         break;
+                    case 'saveAgentSettings':
+                        await this.handleAgentSettingsSave(message.rootFolder, message.agentsFolder);
+                        break;
                     case 'savePreviewSettings':
                         await this.handlePreviewSettingsSave(message.previewRowLimit);
                         break;
@@ -157,6 +166,22 @@ export class SettingsPanel {
                         break;
                     case 'setStackUrl':
                         await this.handleProviderSelection(message.url);
+                        break;
+                    // Multi-project credentials handlers
+                    case 'getProjects':
+                        await this.handleGetProjects();
+                        break;
+                    case 'addProject':
+                        await this.handleAddProject(message.project, message.token);
+                        break;
+                    case 'updateProject':
+                        await this.handleUpdateProject(message.projectId, message.updates);
+                        break;
+                    case 'removeProject':
+                        await this.handleRemoveProject(message.projectId);
+                        break;
+                    case 'testProjectConnection':
+                        await this.handleTestProjectConnection(message.projectId);
                         break;
                 }
             },
@@ -356,6 +381,73 @@ export class SettingsPanel {
         }
     }
 
+    private async handleAgentSettingsSave(rootFolder: string, agentsFolder: string): Promise<void> {
+        try {
+            // Validate folder names (no path traversal, no leading slashes, allow hyphens/underscores)
+            const folderNameRegex = /^[a-zA-Z0-9_-]+$/;
+            
+            if (!rootFolder || rootFolder.trim() === '') {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Keboola Root Folder cannot be empty',
+                    container: 'agentMessageContainer'
+                });
+                return;
+            }
+
+            if (!folderNameRegex.test(rootFolder)) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Keboola Root Folder can only contain letters, numbers, hyphens, and underscores',
+                    container: 'agentMessageContainer'
+                });
+                return;
+            }
+
+            if (!agentsFolder || agentsFolder.trim() === '') {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Agents Sub-Folder cannot be empty',
+                    container: 'agentMessageContainer'
+                });
+                return;
+            }
+
+            if (!folderNameRegex.test(agentsFolder)) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: 'Agents Sub-Folder can only contain letters, numbers, hyphens, and underscores',
+                    container: 'agentMessageContainer'
+                });
+                return;
+            }
+
+            // Save agent settings
+            await this.context.globalState.update('keboola.export.rootFolder', rootFolder.trim());
+            await this.context.globalState.update('keboola.export.agentsFolder', agentsFolder.trim());
+            
+            // Show feedback
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `Agent settings saved! Root folder: "${rootFolder.trim()}", Agents folder: "${agentsFolder.trim()}"`,
+                container: 'agentMessageContainer'
+            });
+
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to save agent settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'agentMessageContainer'
+            });
+        }
+    }
+
     private async handleTestConnection(): Promise<void> {
         console.log('HandleTestConnection called');
         try {
@@ -427,6 +519,136 @@ export class SettingsPanel {
                 command: 'showMessage',
                 type: 'error',
                 text: `System check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    // Multi-project credentials handlers
+    private async handleGetProjects(): Promise<void> {
+        try {
+            const projects = await this.projectManager.getProjects();
+            this.panel.webview.postMessage({
+                command: 'projectsLoaded',
+                projects: projects
+            });
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to load projects: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    private async handleAddProject(project: ProjectCredential, token?: string): Promise<void> {
+        try {
+            await this.projectManager.addProject(project);
+            
+            // Store the token if provided
+            if (token) {
+                await this.projectManager.storeProjectToken(project.id, token);
+            }
+            
+            // Reload projects and send updated list
+            const projects = await this.projectManager.getProjects();
+            this.panel.webview.postMessage({
+                command: 'projectsUpdated',
+                projects: projects
+            });
+            
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `Project "${project.name}" added successfully!`
+            });
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to add project: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    private async handleUpdateProject(projectId: string, updates: Partial<ProjectCredential>): Promise<void> {
+        try {
+            await this.projectManager.updateProject(projectId, updates);
+            
+            // Reload projects and send updated list
+            const projects = await this.projectManager.getProjects();
+            this.panel.webview.postMessage({
+                command: 'projectsUpdated',
+                projects: projects
+            });
+            
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `Project updated successfully!`
+            });
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to update project: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    private async handleRemoveProject(projectId: string): Promise<void> {
+        try {
+            await this.projectManager.removeProject(projectId);
+            
+            // Reload projects and send updated list
+            const projects = await this.projectManager.getProjects();
+            this.panel.webview.postMessage({
+                command: 'projectsUpdated',
+                projects: projects
+            });
+            
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `Project removed successfully!`
+            });
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `Failed to remove project: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    private async handleTestProjectConnection(projectId: string): Promise<void> {
+        try {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'info',
+                text: `Testing connection for project ${projectId}...`
+            });
+
+            const success = await this.projectManager.testProjectConnection(projectId);
+            
+            if (success) {
+                const project = await this.projectManager.getProject(projectId);
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'success',
+                    text: `✅ Connection successful for project "${project?.name}"!`
+                });
+            } else {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: `❌ Connection failed for project ${projectId}. Please check your credentials.`
+                });
+            }
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
     }
@@ -655,13 +877,16 @@ export class SettingsPanel {
             previewRowLimit: this.context.globalState.get<number>('keboola.previewRowLimit') || 100,
             exportRowLimit: this.context.globalState.get<number>('keboola.exportRowLimit') || 2000,
             includeHeaders: this.context.globalState.get<boolean>('keboola.includeHeaders') ?? true,
-            exportFolderName: this.context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project',
+            exportFolderName: this.context.globalState.get<string>('keboola.exportFolderName') || 'data',
             useShortTableNames: this.context.globalState.get<boolean>('keboola.useShortTableNames') ?? false,
             lastUsed: this.context.globalState.get<string>('keboola.lastUsedUrl'),
             // Table Watcher settings with defaults
             watchEnabled: this.context.globalState.get<boolean>('keboola.watchEnabled') ?? true,
             watchIntervalSec: this.context.globalState.get<number>('keboola.watchIntervalSec') || 20,
-            autoDownload: this.context.globalState.get<boolean>('keboola.autoDownload') ?? false
+            autoDownload: this.context.globalState.get<boolean>('keboola.autoDownload') ?? false,
+            // New agent settings
+            rootFolder: this.context.globalState.get<string>('keboola.export.rootFolder') || 'keboola',
+            agentsFolder: this.context.globalState.get<string>('keboola.export.agentsFolder') || 'agents'
         };
     }
 
@@ -1149,6 +1374,34 @@ export class SettingsPanel {
                     <div id="connectionMessageContainer" style="margin-top: 15px;"></div>
                 </div>
                 
+                <!-- Multi-Project Credentials Section -->
+                <div class="section">
+                    <h2 class="section-title">🏢 Multi-Project Credentials (for AI Agents)</h2>
+                    <div class="settings-container">
+                        <p style="margin-bottom: 20px; color: var(--vscode-descriptionForeground);">
+                            Manage multiple Keboola project credentials for AI agents. Agents can operate across different projects using these credentials.
+                        </p>
+                        
+                        <div id="projectsList" style="margin-bottom: 20px;">
+                            <!-- Projects will be loaded here -->
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <button class="button" onclick="loadProjects()">🔄 Refresh Projects</button>
+                            <button class="button secondary" onclick="showAddProjectForm()">➕ Add Project</button>
+                        </div>
+                        
+                        <!-- Message container for project operations -->
+                        <div id="projectMessageContainer" style="margin-top: 15px;"></div>
+                        
+                        <div style="margin-top: 16px; font-size: 12px; color: var(--vscode-descriptionForeground);">
+                            💡 <strong>Default Project:</strong> Used when no specific project is specified<br>
+                            💡 <strong>Token Storage:</strong> Tokens are stored securely in VS Code SecretStorage<br>
+                            💡 <strong>Agent Access:</strong> Agents can access any project listed here
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="section">
                     <h2 class="section-title">⚙️ Row Limits & Export Settings</h2>
                     
@@ -1193,6 +1446,26 @@ export class SettingsPanel {
                                 <div class="form-help">Folder where all exports will be saved (e.g., "kbc_project" → workspace/kbc_project/)</div>
                             </div>
                             
+                            <div class="form-group">
+                                <label class="form-label" for="rootFolderInput">Keboola Root Folder:</label>
+                                <input type="text" 
+                                       id="rootFolderInput" 
+                                       class="form-input" 
+                                       placeholder="keboola"
+                                       value="${settings.rootFolder}">
+                                <div class="form-help">All project data will be stored under this folder in your workspace.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="agentsFolderInput">Agents Sub-Folder:</label>
+                                <input type="text" 
+                                       id="agentsFolderInput" 
+                                       class="form-input" 
+                                       placeholder="agents"
+                                       value="${settings.agentsFolder}">
+                                <div class="form-help">Agent runs will be saved in {rootFolder}/{agentsFolder}.</div>
+                            </div>
+                            
                             <div class="checkbox-group">
                                 <input type="checkbox" 
                                        id="includeHeadersInput" 
@@ -1213,6 +1486,11 @@ export class SettingsPanel {
                             
                             <!-- Message container for export settings -->
                             <div id="exportMessageContainer" style="margin-top: 15px;"></div>
+                            
+                            <button class="button" onclick="saveAgentSettings()">💾 Save Agent Settings</button>
+                            
+                            <!-- Message container for agent settings -->
+                            <div id="agentMessageContainer" style="margin-top: 15px;"></div>
                         </div>
                     </div>
                     
@@ -1346,6 +1624,27 @@ export class SettingsPanel {
                     });
                 }
                 
+                function saveAgentSettings() {
+                    const rootFolder = document.getElementById('rootFolderInput').value.trim();
+                    const agentsFolder = document.getElementById('agentsFolderInput').value.trim();
+                    
+                    if (!rootFolder) {
+                        showMessage('error', 'Keboola Root Folder cannot be empty', 'agentMessageContainer');
+                        return;
+                    }
+                    
+                    if (!agentsFolder) {
+                        showMessage('error', 'Agents Sub-Folder cannot be empty', 'agentMessageContainer');
+                        return;
+                    }
+                    
+                    vscode.postMessage({
+                        command: 'saveAgentSettings',
+                        rootFolder: rootFolder,
+                        agentsFolder: agentsFolder
+                    });
+                }
+                
                 function saveWatcherSettings() {
                     const watchEnabled = document.getElementById('watchEnabled').checked;
                     const watchIntervalSec = parseInt(document.getElementById('watchIntervalSec').value);
@@ -1459,6 +1758,99 @@ export class SettingsPanel {
                     }
                 });
 
+                // Multi-project credentials functions
+                function loadProjects() {
+                    vscode.postMessage({
+                        command: 'getProjects'
+                    });
+                }
+                
+                function showAddProjectForm() {
+                    const projectsList = document.getElementById('projectsList');
+                    if (!projectsList) return;
+                    
+                    const formHtml = \`
+                        <div class="project-form" style="background: var(--vscode-input-background); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
+                            <h4 style="margin: 0 0 12px 0;">Add New Project</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px;">Project ID:</label>
+                                    <input type="text" id="newProjectId" placeholder="my-project" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px;">Project Name:</label>
+                                    <input type="text" id="newProjectName" placeholder="My Project" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">Stack URL:</label>
+                                <input type="text" id="newProjectUrl" placeholder="https://connection.eu-central-1.keboola.com/" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">API Token:</label>
+                                <input type="password" id="newProjectToken" placeholder="Enter API token" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="addProject()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Add Project</button>
+                                <button onclick="cancelAddProject()" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cancel</button>
+                            </div>
+                        </div>
+                    \`;
+                    
+                    projectsList.insertAdjacentHTML('afterbegin', formHtml);
+                }
+                
+                function addProject() {
+                    const projectId = document.getElementById('newProjectId').value.trim();
+                    const projectName = document.getElementById('newProjectName').value.trim();
+                    const stackUrl = document.getElementById('newProjectUrl').value.trim();
+                    const token = document.getElementById('newProjectToken').value.trim();
+                    
+                    if (!projectId || !projectName || !stackUrl || !token) {
+                        showMessage('error', 'Please fill in all fields', 'projectMessageContainer');
+                        return;
+                    }
+                    
+                    const project = {
+                        id: projectId,
+                        name: projectName,
+                        stackUrl: stackUrl,
+                        tokenSecretKey: \`keboola.token.\${projectId}\`,
+                        default: false
+                    };
+                    
+                    vscode.postMessage({
+                        command: 'addProject',
+                        project: project,
+                        token: token
+                    });
+                    
+                    cancelAddProject();
+                }
+                
+                function cancelAddProject() {
+                    const form = document.querySelector('.project-form');
+                    if (form) {
+                        form.remove();
+                    }
+                }
+                
+                function testProjectConnection(projectId) {
+                    vscode.postMessage({
+                        command: 'testProjectConnection',
+                        projectId: projectId
+                    });
+                }
+                
+                function removeProject(projectId) {
+                    if (confirm('Are you sure you want to remove this project?')) {
+                        vscode.postMessage({
+                            command: 'removeProject',
+                            projectId: projectId
+                        });
+                    }
+                }
+                
                 // Listen for messages from the extension
                 window.addEventListener('message', event => {
                     const message = event.data;
@@ -1472,7 +1864,47 @@ export class SettingsPanel {
                                 banner.innerHTML = message.html;
                             }
                             break;
+                        case 'projectsLoaded':
+                        case 'projectsUpdated':
+                            updateProjectsList(message.projects);
+                            break;
                     }
+                });
+                
+                function updateProjectsList(projects) {
+                    const projectsList = document.getElementById('projectsList');
+                    if (!projectsList) return;
+                    
+                    if (projects.length === 0) {
+                        projectsList.innerHTML = '<p style="color: var(--vscode-descriptionForeground); font-style: italic;">No projects configured. Click "Add Project" to get started.</p>';
+                        return;
+                    }
+                    
+                    const projectsHtml = projects.map(project => \`
+                        <div class="project-item" style="background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; color: var(--vscode-editor-foreground);">
+                                        \${project.name} \${project.default ? '<span style="background: var(--vscode-charts-blue); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 8px;">DEFAULT</span>' : ''}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 4px;">
+                                        ID: \${project.id} • URL: \${project.stackUrl}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 6px;">
+                                    <button onclick="testProjectConnection('\${project.id}')" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Test</button>
+                                    <button onclick="removeProject('\${project.id}')" style="background: var(--vscode-errorForeground); color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    \`).join('');
+                    
+                    projectsList.innerHTML = projectsHtml;
+                }
+                
+                // Load projects on page load
+                document.addEventListener('DOMContentLoaded', function() {
+                    loadProjects();
                 });
             </script>
         </body>

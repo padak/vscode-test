@@ -2,7 +2,7 @@
 	"name": "keboola-data-engineering-booster",
 	"displayName": "Keboola Data Engineering Booster",
 	"description": "Comprehensive Keboola project management: explore storage, manage configurations across branches, and monitor job execution",
-	"version": "4.0.1",
+	"version": "4.0.4",
 	"publisher": "keboola",
 	"icon": "media/keboola_blue.png",
 	"engines": {
@@ -508,6 +508,16 @@
 					"type": "string",
 					"default": ".keboola_agents",
 					"description": "Data directory for AI agents"
+				},
+				"keboola.export.rootFolder": {
+					"type": "string",
+					"default": "keboola",
+					"description": "Keboola root folder for all project data"
+				},
+				"keboola.export.agentsFolder": {
+					"type": "string",
+					"default": "agents",
+					"description": "Agents sub-folder within the Keboola root folder"
 				}
 			}
 		}

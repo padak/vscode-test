@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getOutputChannel } from './extension';
-import { constructExportPath, constructBucketExportPath, constructStageExportPath, ensureDirectoryExists, extractStage, extractBucketId, getExportFolderName, getUseShortTableNames } from './workspaceUtils';
+import { constructExportPath, constructBucketExportPath, constructStageExportPath, ensureDirectoryExists, extractStage, extractBucketId, getExportFolderName, getUseShortTableNames, extractTableName } from './workspaceUtils';
 import { DownloadsStore } from './watch/DownloadsStore';
 import { KeboolaApi } from './keboolaApi';
 
@@ -281,7 +281,7 @@ export async function exportTable(
             const stage = extractStage(tableId);
             const bucketId = extractBucketId(tableId);
             
-            const outputPath = constructExportPath(exportFolderName, stage, bucketId, tableId, undefined, useShortTableNames);
+            const outputPath = constructExportPath(exportFolderName, stage, bucketId, tableId, undefined, useShortTableNames, context);
             if (!outputPath) {
                 throw new Error('No workspace folder found. Please open a workspace to export data.');
             }
@@ -541,7 +541,7 @@ export async function exportBucket(
             const exportFolderName = getExportFolderName(context);
             const stage = extractStage(bucketId);
             
-            const bucketDir = constructBucketExportPath(exportFolderName, stage, bucketId);
+            const bucketDir = constructBucketExportPath(exportFolderName, stage, bucketId, context);
             if (!bucketDir) {
                 throw new Error('No workspace folder found. Please open a workspace to export data.');
             }
@@ -600,7 +600,17 @@ export async function exportBucket(
 
                 outputChannel.appendLine(`Exporting table ${i + 1}/${tables.length}: ${table.id}`);
 
-                const fileName = `${table.id.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
+                // Get short table names setting
+                const useShortTableNames = getUseShortTableNames(context);
+                
+                let fileName: string;
+                if (useShortTableNames) {
+                    // Use only the table name (e.g., "weather.csv" from "in.c-data.weather")
+                    fileName = `${extractTableName(table.id)}.csv`;
+                } else {
+                    // Use full table ID (e.g., "in.c-data.weather.csv")
+                    fileName = `${table.id.replace(/[^a-zA-Z0-9.-]/g, '_')}.csv`;
+                }
                 const tablePath = path.join(bucketDir, fileName);
 
                 const downloadCommand = buildDownloadCommand(table.id, tablePath, exportSettings);
@@ -786,7 +796,7 @@ export async function exportStage(
             // Construct workspace export path for stage
             const exportFolderName = getExportFolderName(context);
             
-            const stageDir = constructStageExportPath(exportFolderName, stage);
+            const stageDir = constructStageExportPath(exportFolderName, stage, context);
             if (!stageDir) {
                 throw new Error('No workspace folder found. Please open a workspace to export data.');
             }

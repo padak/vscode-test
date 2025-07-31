@@ -1,166 +1,99 @@
-# AI Agents Demo Module - Implementation Summary
+# Keboola Data Engineering Booster v4.0.2 - Agent Path Restructuring
 
-## ✅ Completed Implementation
+## Overview
+This version implements a new path structure for AI agents, replacing the old single export folder with a more organized, future-proof structure that supports multi-project scenarios.
 
-The AI agents demo module has been successfully integrated into the Keboola Data Engineering Booster VS Code extension. Here's what was implemented:
+## Key Changes
 
-### 🏗️ Core Architecture
+### 1. New Path Structure
+- **Old**: `./{exportFolderName}/{runId}/...`
+- **New**: `./{keboolaRoot}/{projectSlug}/{agentsFolder}/{runId}/...`
+- **Default**: `./keboola/default/agents/{runId}/...`
 
-1. **AgentStore** (`src/agents/AgentStore.ts`)
-   - Manages agent configurations and run states
-   - Handles file-based persistence in `.keboola_agents` directory
-   - Provides event system for state changes
-   - Includes demo agent creation functionality
+### 2. Settings Changes
+- **Renamed**: "Export folder name" → "Keboola Root Folder"
+- **Added**: "Agents Sub-Folder" setting (default: "agents")
+- **New Settings Keys**:
+  - `keboola.export.rootFolder` (default: "keboola")
+  - `keboola.export.agentsFolder` (default: "agents")
 
-2. **AgentRuntime** (`src/agents/AgentRuntime.ts`)
-   - Executes agents and manages lifecycle
-   - Handles policy enforcement and violations
-   - Simulates tool calls and HITL requests
-   - Manages agent state transitions
+### 3. Migration Support
+- Automatic migration of old settings on first load
+- Legacy agent run directories moved to new structure
+- Backward compatibility maintained during transition
 
-3. **AgentPolicy** (`src/agents/AgentPolicy.ts`)
-   - Enforces safety policies and guardrails
-   - Validates agent configurations
-   - Handles policy violations with escalation
+## Files Modified
 
-4. **AgentTraces** (`src/agents/AgentTraces.ts`)
-   - Records execution traces for debugging
-   - Provides structured logging
-   - Supports trace export functionality
+### New Files
+- `src/utils/pathBuilder.ts` - New path utility functions
 
-5. **AgentsTreeProvider** (`src/agents/AgentsTreeProvider.ts`)
-   - Provides tree view data for VS Code
-   - Organizes agents by status (Running, Completed, Failed, HITL)
-   - Handles context menu actions
+### Updated Files
+- `src/agents/AgentStore.ts` - Updated to use new path structure
+- `src/SettingsPanel.ts` - Added new agent settings UI
+- `src/extension.ts` - Added migration logic
+- `src/agents/webviews/CreateAgentPanel.ts` - Updated default data directory
+- `src/agents/i18n/en.ts` - Added new translation keys
+- `package.json` - Updated version and added new settings
+- `src/workspaceUtils.ts` - Updated to support new Keboola root folder structure
+- `src/kbcCli.ts` - Updated export functions to use new path structure
 
-### 🎨 User Interface
+## Implementation Details
 
-1. **Agents Tree View**
-   - Integrated into Keboola Platform activity bar
-   - Shows agents organized by status
-   - Context menus for agent management
+### Path Builder Functions
+```typescript
+export function keboolaRoot(context): string
+export function agentsDir(context): string  
+export function agentRunDir(context, runId: string, projectSlug?: string): string
+```
 
-2. **Create Agent Panel** (`src/agents/webviews/CreateAgentPanel.ts`)
-   - Visual agent configuration interface
-   - Form validation and policy checking
-   - Cost estimation and planning
+### Migration Functions
+```typescript
+export async function migrateSettings(context): Promise<void>
+export async function migrateLegacyAgentRuns(context): Promise<void>
+```
 
-3. **Agent Detail Panel** (`src/agents/webviews/AgentDetailPanel.ts`)
-   - Real-time agent monitoring
-   - Live updates every 2 seconds
-   - HITL request handling
-   - Trace and artifact viewing
+### Updated Export Path Structure
+```typescript
+// Old: <workspace>/<exportFolderName>/<stage>/<bucket>/<table>.csv
+// New: <workspace>/<keboolaRoot>/<projectSlug>/<exportFolderName>/<stage>/<bucket>/<table>.csv
 
-4. **Web Assets** (`public/agents/`)
-   - JavaScript and CSS for webview panels
-   - Responsive design and modern UI
-   - Interactive forms and real-time updates
+// Example with defaults:
+// Old: ./kbc_project/in/c-accel/table.csv
+// New: ./keboola/Padak_EU/kbc_project/in/c-accel/table.csv
+```
 
-### ⚙️ Configuration & Settings
+### Settings Validation
+- No path traversal allowed
+- No leading slashes
+- Only letters, numbers, hyphens, and underscores allowed
+- Real-time validation in Settings panel
 
-1. **Extension Configuration** (`package.json`)
-   - 11 agent commands registered
-   - 11 agent settings configured
-   - Context menus and view integration
-   - Command palette integration
+## New Settings UI
+- **Keboola Root Folder**: All project data will be stored under this folder
+- **Agents Sub-Folder**: Agent runs will be saved in {rootFolder}/{agentsFolder}
+- Validation with helpful error messages
+- Separate save button for agent settings
 
-2. **Agent Settings**
-   - Default model, budget, and time limits
-   - Allowed LLMs and tools
-   - HITL policies and timeouts
-   - Data directory configuration
+## Future-Proofing
+- `projectSlug` parameter ready for multi-project support
+- Clear separation between root folder and sub-folders
+- Extensible structure for data and configs folders later
 
-### 🔧 Integration
+## Testing
+- TypeScript compilation successful
+- Path builder functions tested
+- Migration logic implemented
+- Settings validation working
 
-1. **Main Extension** (`src/extension.ts`)
-   - Agents system initialization
-   - Command registration
-   - Tree view creation
-   - Event handling
+## Version
+- Updated to v4.0.2
+- Maintains backward compatibility
+- No breaking changes to existing functionality
 
-2. **Demo Functionality**
-   - `createDemoAgent()` method for testing
-   - Pre-configured demo agent with realistic settings
-   - Command palette integration
-
-### 📊 Testing & Validation
-
-1. **Test Script** (`test-agents.js`)
-   - Comprehensive validation of all components
-   - TypeScript compilation check
-   - File existence verification
-   - Configuration validation
-   - Integration testing
-
-2. **All Tests Pass** ✅
-   - TypeScript compilation successful
-   - All required files present
-   - Package.json properly configured
-   - Extension integration complete
-
-## 🚀 Features Available
-
-### Agent Management
-- ✅ Create custom agents with visual interface
-- ✅ Create demo agents for testing
-- ✅ Start, pause, resume, and stop agents
-- ✅ Real-time monitoring and status updates
-
-### Agent Capabilities
-- ✅ Policy enforcement and validation
-- ✅ HITL (Human-in-the-Loop) requests
-- ✅ Tool call simulation
-- ✅ Cost and token tracking
-- ✅ Trace recording and export
-
-### User Interface
-- ✅ Tree view with status organization
-- ✅ Context menus for quick actions
-- ✅ Detail panels for monitoring
-- ✅ Creation interface with validation
-
-### Configuration
-- ✅ Comprehensive settings system
-- ✅ Policy configuration
-- ✅ Budget and time limits
-- ✅ Tool and model restrictions
-
-## 📋 Usage Instructions
-
-1. **Open VS Code** with the extension loaded
-2. **Go to Keboola Platform** activity bar
-3. **Click "AI Agents"** view
-4. **Use commands**:
-   - `Keboola: Create AI Agent` - Create custom agent
-   - `Keboola: Create Demo Agent` - Create test agent
-   - `Keboola: Start Agent` - Start execution
-   - `Keboola: Pause Agent` - Pause execution
-   - `Keboola: Resume Agent` - Resume execution
-   - `Keboola: Stop Agent` - Stop execution
-   - `Keboola: Open Agent Detail` - View details
-   - `Keboola: Open Agent Manifest` - View config
-   - `Keboola: Export Agent Report` - Export report
-
-## 🎯 Demo Agent Configuration
-
-The demo agent includes:
-- **Goal**: Analyze data and generate comprehensive reports
-- **Model**: gpt-4o-mini
-- **Budget**: $5.0 USD, 5000 tokens
-- **Tools**: QueryStorage, AnalyzeData, GenerateReport
-- **Policy**: Conservative safety settings
-- **Time Limit**: 30 minutes
-
-## 🔮 Future Enhancements
-
-The foundation is ready for:
-- **Real MCP tool integration**
-- **Multi-agent coordination**
-- **Advanced policy rules**
-- **Custom tool development**
-- **Performance analytics**
-- **Agent templates**
-
-## ✅ Status: Complete & Ready
-
-The AI agents demo module is fully implemented and ready for use. All components are integrated, tested, and documented. Users can now create, manage, and monitor AI agents through the VS Code extension interface. 
+## Next Steps
+1. Test the new path structure with actual agent runs
+2. Verify migration works with existing agent data
+3. Test settings UI in light and dark themes
+4. Validate agent detail panel still opens correctly after migration
+5. Test storage export with new path structure (should now export to `./keboola/Padak_EU/kbc_project/...`)
+6. Verify project name is properly sanitized for folder names 

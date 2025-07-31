@@ -544,7 +544,7 @@ export class StageDetailPanel {
             };
 
             // Construct workspace export path for schema
-            const exportFolderName = this.context?.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+            const exportFolderName = this.context?.globalState.get<string>('keboola.exportFolderName') || 'data';
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!workspaceRoot) {
                 vscode.window.showErrorMessage('No workspace folder found. Please open a workspace to export metadata.');

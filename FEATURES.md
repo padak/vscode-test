@@ -322,7 +322,27 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ---
 
-## 🔄 **What's New in Version 4.0.2**
+## 🔄 **What's New in Version 4.0.4**
+
+### 🏢 **Version 4.0.4 - Multi-Project Credentials for AI Agents**
+#### 🆕 **Major New Features**
+- **🏢 Multi-Project Support**: AI agents can now operate across multiple Keboola projects simultaneously
+- **🔑 Project Credentials Management**: Add, edit, and remove project credentials with secure token storage
+- **🎯 Project Selection**: Choose which projects agents can access with per-project permissions
+- **🔄 Backward Compatibility**: Existing single-project agents continue to work without changes
+- **📊 Project Context**: Agents can specify which project to use for each tool call
+
+#### 🔧 **Enhanced Agent Configuration**
+- **Project Context Array**: Agents now include `projects[]` and `defaultProjectId` fields
+- **Migration Support**: Automatic migration of old agent configs to multi-project format
+- **Project Guardrails**: Policy-based restrictions on which projects agents can access
+- **Token Security**: Project tokens stored securely in VS Code SecretStorage
+
+#### 🎨 **Settings Panel Enhancements**
+- **Multi-Project UI**: New section in Settings for managing project credentials
+- **Project Management**: Add, test, and remove project connections
+- **Default Project**: Set which project is used when none is specified
+- **Connection Testing**: Verify project credentials before adding them
 
 ### 🐛 **Version 4.0.2 - Bucket Detail Panel Fix**
 #### 🔧 **Critical Bug Fix**

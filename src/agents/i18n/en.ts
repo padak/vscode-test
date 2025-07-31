@@ -182,6 +182,10 @@ export const t = {
     settings_hitl_fallback: 'HITL Fallback',
     settings_export_traces: 'Export traces to file',
     settings_data_dir: 'Data Directory',
+    settings_rootFolder_label: 'Keboola Root Folder',
+    settings_rootFolder_desc: 'All project data will be stored under this folder in your workspace.',
+    settings_agentsFolder_label: 'Agents Sub-Folder',
+    settings_agentsFolder_desc: 'Agent runs will be saved in {rootFolder}/{agentsFolder}.',
     
     // Policy Violations
     violation_forbidden_action: 'Forbidden action attempted',

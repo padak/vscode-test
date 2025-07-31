@@ -15,7 +15,7 @@ export function getWorkspaceRoot(): string | undefined {
 
 /**
  * Construct export path for a table within the workspace
- * Format: <workspace>/<exportFolderName>/<stage>/<bucket>/<table>.csv
+ * Format: <workspace>/<keboolaRoot>/<projectSlug>/<exportFolderName>/<stage>/<bucket>/<table>.csv
  */
 export function constructExportPath(
     exportFolderName: string,
@@ -23,7 +23,8 @@ export function constructExportPath(
     bucketId: string,
     tableId: string,
     fileName?: string,
-    useShortTableNames?: boolean
+    useShortTableNames?: boolean,
+    context?: vscode.ExtensionContext
 ): string | undefined {
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot) {
@@ -45,17 +46,26 @@ export function constructExportPath(
         }
     }
     
+    // Use new Keboola root folder structure if context is provided
+    if (context) {
+        const keboolaRoot = getKeboolaRootFolder(context);
+        const projectSlug = getProjectSlug(context);
+        return path.join(workspaceRoot, keboolaRoot, projectSlug, exportFolderName, stage, bucketName, finalFileName);
+    }
+    
+    // Fallback to old structure for backward compatibility
     return path.join(workspaceRoot, exportFolderName, stage, bucketName, finalFileName);
 }
 
 /**
  * Construct export directory path for a bucket
- * Format: <workspace>/<exportFolderName>/<stage>/<bucket>/
+ * Format: <workspace>/<keboolaRoot>/<projectSlug>/<exportFolderName>/<stage>/<bucket>/
  */
 export function constructBucketExportPath(
     exportFolderName: string,
     stage: string,
-    bucketId: string
+    bucketId: string,
+    context?: vscode.ExtensionContext
 ): string | undefined {
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot) {
@@ -65,22 +75,39 @@ export function constructBucketExportPath(
     // Extract bucket name from bucket ID (e.g., "in.c-main" -> "c-main")
     const bucketName = bucketId.includes('.') ? bucketId.split('.').slice(1).join('.') : bucketId;
     
+    // Use new Keboola root folder structure if context is provided
+    if (context) {
+        const keboolaRoot = getKeboolaRootFolder(context);
+        const projectSlug = getProjectSlug(context);
+        return path.join(workspaceRoot, keboolaRoot, projectSlug, exportFolderName, stage, bucketName);
+    }
+    
+    // Fallback to old structure for backward compatibility
     return path.join(workspaceRoot, exportFolderName, stage, bucketName);
 }
 
 /**
  * Construct export directory path for a stage
- * Format: <workspace>/<exportFolderName>/<stage>/
+ * Format: <workspace>/<keboolaRoot>/<projectSlug>/<exportFolderName>/<stage>/
  */
 export function constructStageExportPath(
     exportFolderName: string,
-    stage: string
+    stage: string,
+    context?: vscode.ExtensionContext
 ): string | undefined {
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot) {
         return undefined;
     }
     
+    // Use new Keboola root folder structure if context is provided
+    if (context) {
+        const keboolaRoot = getKeboolaRootFolder(context);
+        const projectSlug = getProjectSlug(context);
+        return path.join(workspaceRoot, keboolaRoot, projectSlug, exportFolderName, stage);
+    }
+    
+    // Fallback to old structure for backward compatibility
     return path.join(workspaceRoot, exportFolderName, stage);
 }
 
@@ -112,7 +139,26 @@ export function extractBucketId(tableId: string): string {
  * Get export folder name from settings
  */
 export function getExportFolderName(context: vscode.ExtensionContext): string {
-    return context.globalState.get<string>('keboola.exportFolderName') || 'kbc_project';
+    return context.globalState.get<string>('keboola.exportFolderName') || 'data';
+}
+
+/**
+ * Get Keboola root folder from settings
+ */
+export function getKeboolaRootFolder(context: vscode.ExtensionContext): string {
+    return context.globalState.get<string>('keboola.export.rootFolder') || 'keboola';
+}
+
+/**
+ * Get project slug for data exports (defaults to project name or 'default')
+ */
+export function getProjectSlug(context: vscode.ExtensionContext): string {
+    const projectName = context.globalState.get<string>('keboola.projectName');
+    if (projectName && projectName !== 'Unknown Project') {
+        // Allow national characters and spaces, only replace truly problematic characters
+        return projectName.replace(/[<>:"|?*]/g, '_');
+    }
+    return 'default';
 }
 
 /**

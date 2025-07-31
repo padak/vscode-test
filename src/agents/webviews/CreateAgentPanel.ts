@@ -9,6 +9,7 @@ export class CreateAgentPanel {
     public static currentPanel: CreateAgentPanel | undefined;
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
+    private readonly _context: vscode.ExtensionContext;
     private _disposables: vscode.Disposable[] = [];
 
     public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, store: any, runtime: any) {
@@ -39,6 +40,7 @@ export class CreateAgentPanel {
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, context: vscode.ExtensionContext, private store: any, private runtime: any) {
         this._panel = panel;
         this._extensionUri = extensionUri;
+        this._context = context;
 
         this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
 
@@ -81,6 +83,9 @@ export class CreateAgentPanel {
                         break;
                     case 'selectPreset':
                         await this.handleSelectPreset(message.data);
+                        break;
+                    case 'getAvailableProjects':
+                        await this.handleGetAvailableProjects();
                         break;
                 }
             },
@@ -191,6 +196,8 @@ export class CreateAgentPanel {
             allowedLLMs: data.allowedLLMs || [data.selectedLLM],
             allowedTools: data.allowedTools || [],
             credentials: data.credentials || [],
+            projects: data.projects || [],
+            defaultProjectId: data.defaultProjectId || 'default',
             budgetUSD: data.budgetUSD || 10.0,
             tokenBudget: data.tokenBudget || 0,
             timeLimitSec: data.timeLimitSec || 3600,
@@ -249,7 +256,7 @@ export class CreateAgentPanel {
             hitlTimeoutSec: 300,
             hitlFallback: 'pause',
             exportTracesToFile: true,
-            dataDir: '.keboola_agents',
+            dataDir: 'keboola/agents',
             enableSimulatedEvents: false
         };
     }
@@ -262,6 +269,25 @@ export class CreateAgentPanel {
             { id: 'mcp://keboola/ListTables', name: 'ListTables', description: 'List available tables' },
             { id: 'mcp://keboola/GetTableInfo', name: 'GetTableInfo', description: 'Get detailed table information' }
         ];
+    }
+
+    private async handleGetAvailableProjects() {
+        try {
+            const { ProjectManager } = await import('../../ProjectManager');
+            const projectManager = new ProjectManager(this._context);
+            const projects = await projectManager.getProjects();
+            
+            this._panel.webview.postMessage({
+                command: 'availableProjectsLoaded',
+                projects: projects
+            });
+        } catch (error) {
+            console.error('Failed to load available projects:', error);
+            this._panel.webview.postMessage({
+                command: 'availableProjectsLoaded',
+                projects: []
+            });
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {

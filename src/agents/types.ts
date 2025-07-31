@@ -2,6 +2,14 @@ export type AgentId = string;
 export type PresetId = string;
 export type AgentStatus = 'starting' | 'running' | 'waiting_hitl' | 'paused' | 'completed' | 'failed';
 
+export interface ProjectContext {
+    id: string;               // project id or slug
+    name: string;             // human name
+    stackUrl: string;
+    tokenSecretKey: string;   // key in SecretStorage
+    default?: boolean;        // defaultProjectId chooses default=true if omitted
+}
+
 export interface AgentConfig {
     id: AgentId;
     name: string;
@@ -11,6 +19,8 @@ export interface AgentConfig {
     allowedLLMs: string[];
     allowedTools: MCPToolRef[];     // tool registry entries (ids + display names)
     credentials: CredentialRef[];   // only labels/ids; no secrets in files
+    projects: ProjectContext[];     // required ≥1
+    defaultProjectId: string;       // fallback when tool call lacks projectId
     budgetUSD: number;
     tokenBudget: number;            // optional, 0 = unlimited
     timeLimitSec: number;
@@ -26,6 +36,7 @@ export interface AgentPolicy {
     rateLimitPerMin: number;
     forbiddenActions: string[];     // e.g. 'delete_table', 'external_http_post'
     dataAccessScopes: string[];     // e.g. 'storage.read', 'configs.read'
+    allowProjects?: string[];       // allowed project IDs, undefined = all projects
     piiHandling: 'mask' | 'deny' | 'allow';
     escalationOnViolation: 'pause' | 'stop';
 }
