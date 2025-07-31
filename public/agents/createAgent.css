@@ -373,4 +373,74 @@ small {
     font-size: 10px;
     font-weight: 600;
     margin-left: 6px;
+}
+
+/* Project selection styles */
+.projects-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    padding: 10px;
+    background-color: var(--vscode-editor-background);
+}
+
+.project-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    margin-bottom: 4px;
+}
+
+.project-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.project-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    width: 100%;
+}
+
+.project-checkbox input[type="checkbox"] {
+    margin-right: 8px;
+    width: auto;
+}
+
+.project-name {
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    margin-right: 8px;
+}
+
+.project-id {
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+.default-badge {
+    background-color: var(--vscode-charts-blue);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+.form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-size: 14px;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
 } 

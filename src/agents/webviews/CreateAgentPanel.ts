@@ -379,9 +379,30 @@ export class CreateAgentPanel {
             <div id="credentials" class="tab-pane">
                 <div class="form-group">
                     <label>${t.credentials_title}</label>
-                    <button id="addCredential" class="btn-secondary">${t.credentials_add}</button>
-                    <div id="credentialsList">
-                        <!-- Credentials will be populated by JavaScript -->
+                    <p class="help-text">Select which Keboola projects this agent can access</p>
+                    
+                    <div class="form-group">
+                        <label for="defaultProject">Default Project</label>
+                        <select id="defaultProject" class="form-select">
+                            <option value="">Loading projects...</option>
+                        </select>
+                        <small>This project will be used when no specific project is specified</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Available Projects</label>
+                        <div id="projectsList" class="projects-list">
+                            <!-- Projects will be populated by JavaScript -->
+                        </div>
+                        <small>Select which projects this agent can access. Leave all unchecked to allow access to all projects.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Legacy Credentials</label>
+                        <button id="addCredential" class="btn-secondary">${t.credentials_add}</button>
+                        <div id="credentialsList">
+                            <!-- Legacy credentials will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>

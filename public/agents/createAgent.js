@@ -42,10 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load settings, tools, and presets on page load
+    // Load settings, tools, presets, and projects on page load
     vscode.postMessage({ command: 'getSettings' });
     vscode.postMessage({ command: 'getAvailableTools' });
     vscode.postMessage({ command: 'getPresets' });
+    vscode.postMessage({ command: 'getAvailableProjects' });
 
     // Message listener
     window.addEventListener('message', event => {
@@ -70,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'presetSelected':
                 handlePresetSelected(message.data);
                 break;
+            case 'availableProjectsLoaded':
+                handleProjectsLoaded(message.projects);
+                break;
         }
     });
 
@@ -89,10 +93,13 @@ document.addEventListener('DOMContentLoaded', function() {
             hitlTimeoutSec: parseInt(document.getElementById('hitlTimeout').value) || 300,
             hitlFallback: document.getElementById('hitlFallback').value,
             allowedTools: getSelectedTools(),
+            projects: getSelectedProjects(),
+            defaultProjectId: getDefaultProjectId(),
             policy: {
                 maxConcurrentTools: parseInt(document.getElementById('maxConcurrentTools').value) || 3,
                 rateLimitPerMin: parseInt(document.getElementById('rateLimit').value) || 10,
                 piiHandling: document.getElementById('piiHandling').value,
+                allowProjects: getSelectedProjectIds(),
                 escalationOnViolation: 'pause'
             },
             presetId: getSelectedPresetId()
@@ -341,5 +348,70 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             previewDiv.style.display = 'none';
         }
+    }
+
+    // Project handling functions
+    function handleProjectsLoaded(projects) {
+        const defaultProjectSelect = document.getElementById('defaultProject');
+        const projectsList = document.getElementById('projectsList');
+        
+        // Populate default project dropdown
+        defaultProjectSelect.innerHTML = '<option value="">Select default project...</option>';
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = `${project.name} (${project.id})`;
+            if (project.default) {
+                option.selected = true;
+            }
+            defaultProjectSelect.appendChild(option);
+        });
+        
+        // Populate projects list with checkboxes
+        projectsList.innerHTML = '';
+        projects.forEach(project => {
+            const projectItem = document.createElement('div');
+            projectItem.className = 'project-item';
+            projectItem.innerHTML = `
+                <label class="project-checkbox">
+                    <input type="checkbox" name="project" value="${project.id}" ${project.default ? 'checked' : ''}>
+                    <span class="project-name">${project.name}</span>
+                    <span class="project-id">(${project.id})</span>
+                    ${project.default ? '<span class="default-badge">Default</span>' : ''}
+                </label>
+            `;
+            projectsList.appendChild(projectItem);
+        });
+    }
+
+    function getSelectedProjects() {
+        const selectedProjects = [];
+        const projectCheckboxes = document.querySelectorAll('input[name="project"]:checked');
+        projectCheckboxes.forEach(checkbox => {
+            const projectId = checkbox.value;
+            // For now, we'll use the project ID as both id and name
+            // In a real implementation, you'd want to store the full project context
+            selectedProjects.push({
+                id: projectId,
+                name: projectId, // This should be the actual project name
+                stackUrl: '', // This should be the actual stack URL
+                tokenSecretKey: `keboola.token.${projectId}`,
+                default: checkbox.checked && document.getElementById('defaultProject').value === projectId
+            });
+        });
+        return selectedProjects;
+    }
+
+    function getDefaultProjectId() {
+        return document.getElementById('defaultProject').value || 'default';
+    }
+
+    function getSelectedProjectIds() {
+        const selectedProjects = [];
+        const projectCheckboxes = document.querySelectorAll('input[name="project"]:checked');
+        projectCheckboxes.forEach(checkbox => {
+            selectedProjects.push(checkbox.value);
+        });
+        return selectedProjects.length > 0 ? selectedProjects : undefined;
     }
 }); 
