@@ -9,11 +9,44 @@ export class JobsTreeProvider implements vscode.TreeDataProvider<JobTreeItem> {
     private loadedCounts: Map<string, number> = new Map();
     private jobsApi?: JobsApi;
     private readonly pageSize = 50;
+    
+    // Multi-project support
+    private currentProjectId?: string;
+    private projectJobsCache: Map<string, Map<string, KeboolaJob[]>> = new Map();
+    private projectLoadedCounts: Map<string, Map<string, number>> = new Map();
 
     constructor() {}
 
-    setJobsApi(api: JobsApi | undefined): void {
+    /**
+     * Set project context for multi-project support
+     */
+    setProjectContext(projectId: string): void {
+        this.currentProjectId = projectId;
+        
+        // Load cached data for this project if available
+        const projectCache = this.projectJobsCache.get(projectId);
+        const projectCounts = this.projectLoadedCounts.get(projectId);
+        
+        if (projectCache && projectCounts) {
+            this.jobsCache = projectCache;
+            this.loadedCounts = projectCounts;
+        } else {
+            // Initialize empty state for new project
+            this.jobsCache = new Map();
+            this.loadedCounts = new Map();
+            this.projectJobsCache.set(projectId, this.jobsCache);
+            this.projectLoadedCounts.set(projectId, this.loadedCounts);
+        }
+    }
+
+    setJobsApi(api: JobsApi | undefined, projectId?: string): void {
         this.jobsApi = api;
+        
+        // Set project context if provided
+        if (projectId) {
+            this.setProjectContext(projectId);
+        }
+        
         this.refresh();
     }
 

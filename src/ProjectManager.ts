@@ -50,6 +50,15 @@ export class ProjectManager {
     async addProject(project: ProjectCredential): Promise<void> {
         const projects = await this.getProjects();
         
+        // ENFORCE: Same stack validation (strict)
+        if (projects.length > 0) {
+            const stackHost = new URL(project.stackUrl).hostname;
+            const existingHost = new URL(projects[0].stackUrl).hostname;
+            if (stackHost !== existingHost) {
+                throw new Error(`All projects must be on the same stack. Expected: ${existingHost}, Got: ${stackHost}`);
+            }
+        }
+        
         // If this is the first project, make it default
         if (projects.length === 0) {
             project.default = true;

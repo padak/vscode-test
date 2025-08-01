@@ -18,8 +18,10 @@ import { AgentRuntime } from './agents/AgentRuntime';
 import { CreateAgentPanel } from './agents/webviews/CreateAgentPanel';
 import { AgentDetailPanel } from './agents/webviews/AgentDetailPanel';
 import { migrateSettings, migrateLegacyAgentRuns } from './utils/pathBuilder';
+import { MultiProjectApiManager } from './MultiProjectApiManager';
 
 let keboolaApi: KeboolaApi | undefined;
+let multiProjectApiManager: MultiProjectApiManager;
 let keboolaTreeProvider: KeboolaTreeProvider;
 let projectTreeProvider: ProjectTreeProvider;
 let treeView: vscode.TreeView<vscode.TreeItem>;
@@ -53,8 +55,11 @@ export function activate(context: vscode.ExtensionContext) {
     tableWatcher = new TableWatcher(context, downloadsStore, outputChannel);
     watchedTablesTreeProvider = new WatchedTablesTreeProvider(context, downloadsStore);
     
+    // Initialize multi-project API manager FIRST
+    multiProjectApiManager = new MultiProjectApiManager(context);
+    
     // Initialize project tree provider with watched tables support
-    projectTreeProvider = new ProjectTreeProvider(context, keboolaTreeProvider, watchedTablesTreeProvider);
+    projectTreeProvider = new ProjectTreeProvider(context, keboolaTreeProvider, watchedTablesTreeProvider, multiProjectApiManager);
     
     // Create and register the tree view with the activity bar container
     treeView = vscode.window.createTreeView('keboolaExplorer', {
@@ -69,10 +74,14 @@ export function activate(context: vscode.ExtensionContext) {
     initializeAgentsSystem(context);
 
     // Load stored configuration and initialize API
-    initializeFromSettings(context);
+    initializeFromSettings(context).catch(error => {
+        console.error('Failed to initialize from settings:', error);
+    });
 
     // Register commands
     registerCommands(context);
+    
+    // NOTE: Project switching commands removed - using multi-project display instead
 
     console.log('All commands registered successfully');
 }
@@ -87,14 +96,16 @@ function getSettingsFromContext(context: vscode.ExtensionContext) {
     };
 }
 
-function initializeFromSettings(context: vscode.ExtensionContext) {
+async function initializeFromSettings(context: vscode.ExtensionContext) {
     const settings = getSettingsFromContext(context);
     
+    // Initialize with legacy single-project settings if available
     if (settings.apiUrl && settings.token) {
         keboolaApi = new KeboolaApi({ 
             apiUrl: settings.apiUrl, 
             token: settings.token 
         });
+        
         // Pass the same settings to tree provider so Jobs API uses consistent config
         keboolaTreeProvider.setKeboolaApi(keboolaApi, {
             apiUrl: settings.apiUrl,
@@ -103,6 +114,20 @@ function initializeFromSettings(context: vscode.ExtensionContext) {
         
         // Fetch and cache project name
         fetchProjectName(context, keboolaApi);
+    } else {
+        // Try to initialize with multi-project default
+        try {
+            const defaultApi = await multiProjectApiManager.getDefaultApi();
+            if (defaultApi) {
+                keboolaApi = defaultApi;
+                keboolaTreeProvider.setKeboolaApi(defaultApi, {
+                    apiUrl: defaultApi.apiUrl,
+                    token: defaultApi.token
+                });
+            }
+        } catch (error) {
+            console.log('No default project available, using legacy initialization');
+        }
     }
     
     // Initialize table watcher with current settings
@@ -206,6 +231,16 @@ function registerCommands(context: vscode.ExtensionContext) {
         if (keboolaApi) {
             await fetchProjectName(context, keboolaApi);
         }
+    });
+
+    // Refresh project tree view for multi-project changes
+    const refreshProjectTreeViewCmd = vscode.commands.registerCommand('keboola.refreshProjectTreeView', async () => {
+        // Clear multi-project API cache
+        if (multiProjectApiManager) {
+            multiProjectApiManager.clearCache();
+        }
+        // Refresh the project tree provider
+        projectTreeProvider.refresh();
     });
 
     // Set row limit (now opens settings panel)
@@ -406,6 +441,7 @@ function registerCommands(context: vscode.ExtensionContext) {
         showJobCmd,
         showJobsForConfigCmd,
         refreshProjectCmd,
+        refreshProjectTreeViewCmd,
         settingsChangedCmd,
         watchTableCmd,
         unwatchTableCmd,
@@ -613,6 +649,8 @@ async function showBranchDetails(branchId: string, context: vscode.ExtensionCont
         }
     }
 }
+
+// NOTE: switchProject function removed - using multi-project display instead
 
 async function showConfigurationDetails(componentId: string, configurationId: string, branchId: string, context: vscode.ExtensionContext) {
     try {

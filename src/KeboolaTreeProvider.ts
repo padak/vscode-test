@@ -15,19 +15,46 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     private jobsApi?: JobsApi;
     private configurationsProvider: ConfigurationsTreeProvider;
     private jobsProvider: JobsTreeProvider;
+    
+    // Multi-project support
+    private currentProjectId?: string;
+    private projectDataCache: Map<string, { tables: KeboolaTable[], isConnected: boolean }> = new Map();
 
     constructor() {
         this.configurationsProvider = new ConfigurationsTreeProvider();
         this.jobsProvider = new JobsTreeProvider();
     }
 
-    setKeboolaApi(api: KeboolaApi | undefined, config?: {apiUrl: string, token: string}): void {
+    /**
+     * Set project context for multi-project support
+     */
+    setProjectContext(projectId: string): void {
+        this.currentProjectId = projectId;
+        
+        // Load cached data for this project if available
+        const cachedData = this.projectDataCache.get(projectId);
+        if (cachedData) {
+            this.tables = cachedData.tables;
+            this.isApiConnected = cachedData.isConnected;
+        } else {
+            // Initialize empty state for new project
+            this.tables = [];
+            this.isApiConnected = false;
+        }
+    }
+
+    setKeboolaApi(api: KeboolaApi | undefined, config?: {apiUrl: string, token: string}, projectId?: string): void {
         this.keboolaApi = api;
         this.configurationsProvider.setKeboolaApi(api);
         
+        // Set project context if provided
+        if (projectId) {
+            this.setProjectContext(projectId);
+        }
+        
         // Initialize Jobs API if storage API is available
         if (api && config) {
-            console.log(`[KeboolaTreeProvider] Initializing JobsApi with config:`, {
+            console.log(`[KeboolaTreeProvider] Initializing JobsApi with config for project ${projectId || 'default'}:`, {
                 apiUrl: config.apiUrl,
                 tokenLength: config.token ? config.token.length : 0,
                 tokenPrefix: config.token ? config.token.substring(0, 8) + '...' : 'NONE'
@@ -44,8 +71,8 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 
                 if (hostMatch) {
                     this.jobsApi = new JobsApi(hostMatch[1], config.token);
-                    this.jobsProvider.setJobsApi(this.jobsApi);
-                    console.log(`[KeboolaTreeProvider] JobsApi initialized successfully`);
+                    this.jobsProvider.setJobsApi(this.jobsApi, projectId);
+                    console.log(`[KeboolaTreeProvider] JobsApi initialized successfully for project ${projectId || 'default'}`);
                 } else {
                     console.log(`[KeboolaTreeProvider] Failed to extract host from API URL`);
                 }
@@ -55,7 +82,7 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         } else {
             console.log(`[KeboolaTreeProvider] No Storage API or config available, JobsApi not initialized`);
             this.jobsApi = undefined;
-            this.jobsProvider.setJobsApi(undefined);
+            this.jobsProvider.setJobsApi(undefined, projectId);
         }
         
         this.refresh();
@@ -78,11 +105,13 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     }
 
     private async loadData(): Promise<void> {
+        // Initialize default state
         this.tables = [];
         this.isApiConnected = false;
 
         if (!this.keboolaApi) {
             // No API configured
+            this.updateProjectCache();
             return;
         }
 
@@ -106,6 +135,21 @@ export class KeboolaTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             } else {
                 vscode.window.showErrorMessage(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your settings.`);
             }
+        }
+        
+        // Update cache for current project
+        this.updateProjectCache();
+    }
+
+    /**
+     * Update the project data cache with current state
+     */
+    private updateProjectCache(): void {
+        if (this.currentProjectId) {
+            this.projectDataCache.set(this.currentProjectId, {
+                tables: [...this.tables],
+                isConnected: this.isApiConnected
+            });
         }
     }
 

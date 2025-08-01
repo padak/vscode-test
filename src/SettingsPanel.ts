@@ -183,6 +183,24 @@ export class SettingsPanel {
                     case 'testProjectConnection':
                         await this.handleTestProjectConnection(message.projectId);
                         break;
+                    case 'addAdditionalToken':
+                        await this.handleAddAdditionalToken(message.token, message.stackUrl);
+                        break;
+                    case 'testAdditionalToken':
+                        await this.handleTestAdditionalToken(message.tokenId);
+                        break;
+                    case 'removeAdditionalToken':
+                        await this.handleRemoveAdditionalToken(message.tokenId);
+                        break;
+                    case 'getProjects':
+                        await this.handleGetProjects();
+                        break;
+                    case 'getAdditionalTokens':
+                        await this.handleGetAdditionalTokens();
+                        break;
+                    case 'getStackUrl':
+                        this.handleGetStackUrl();
+                        break;
                 }
             },
             null,
@@ -524,21 +542,6 @@ export class SettingsPanel {
     }
 
     // Multi-project credentials handlers
-    private async handleGetProjects(): Promise<void> {
-        try {
-            const projects = await this.projectManager.getProjects();
-            this.panel.webview.postMessage({
-                command: 'projectsLoaded',
-                projects: projects
-            });
-        } catch (error) {
-            this.panel.webview.postMessage({
-                command: 'showMessage',
-                type: 'error',
-                text: `Failed to load projects: ${error instanceof Error ? error.message : 'Unknown error'}`
-            });
-        }
-    }
 
     private async handleAddProject(project: ProjectCredential, token?: string): Promise<void> {
         try {
@@ -599,23 +602,31 @@ export class SettingsPanel {
         try {
             await this.projectManager.removeProject(projectId);
             
-            // Reload projects and send updated list
-            const projects = await this.projectManager.getProjects();
+            // Reload projects and send updated list (filtered like handleGetProjects)
+            const allProjects = await this.projectManager.getProjects();
+            const additionalProjects = allProjects.filter(project => project.id !== 'default');
+            
             this.panel.webview.postMessage({
                 command: 'projectsUpdated',
-                projects: projects
+                projects: additionalProjects
             });
             
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'success',
-                text: `Project removed successfully!`
+                text: `Project removed successfully!`,
+                container: 'tokenMessageContainer'
             });
+
+            // Also refresh the tree view
+            vscode.commands.executeCommand('keboola.refreshProjectTreeView');
+            
         } catch (error) {
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'error',
-                text: `Failed to remove project: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `Failed to remove project: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
             });
         }
     }
@@ -625,7 +636,8 @@ export class SettingsPanel {
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'info',
-                text: `Testing connection for project ${projectId}...`
+                text: `Testing connection for project ${projectId}...`,
+                container: 'tokenMessageContainer'
             });
 
             const success = await this.projectManager.testProjectConnection(projectId);
@@ -635,22 +647,238 @@ export class SettingsPanel {
                 this.panel.webview.postMessage({
                     command: 'showMessage',
                     type: 'success',
-                    text: `✅ Connection successful for project "${project?.name}"!`
+                    text: `✅ Connection successful for project "${project?.name}"!`,
+                    container: 'tokenMessageContainer'
                 });
             } else {
                 this.panel.webview.postMessage({
                     command: 'showMessage',
                     type: 'error',
-                    text: `❌ Connection failed for project ${projectId}. Please check your credentials.`
+                    text: `❌ Connection failed for project ${projectId}. Please check your credentials.`,
+                    container: 'tokenMessageContainer'
                 });
             }
         } catch (error) {
             this.panel.webview.postMessage({
                 command: 'showMessage',
                 type: 'error',
-                text: `❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
             });
         }
+    }
+
+    private async handleAddAdditionalToken(token: string, stackUrl: string): Promise<void> {
+        try {
+            // Test the token first
+            const keboolaApi = new KeboolaApi({ apiUrl: stackUrl, token: token });
+            const testResult = await keboolaApi.testConnection();
+            
+            if (!testResult.success) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: '❌ Invalid token. Please check your token.',
+                    container: 'tokenMessageContainer'
+                });
+                return;
+            }
+
+            // Generate a unique ID for the token
+            const tokenInfo = testResult.tokenInfo;
+            const projectId = tokenInfo.owner?.id || `token_${Date.now()}`;
+            
+            // Create project credential in the same format as ProjectManager
+            const projectCredential = {
+                id: projectId,
+                name: tokenInfo.owner?.name || 'Unknown Project',
+                stackUrl: stackUrl,
+                tokenSecretKey: `keboola.additional.${projectId}`,
+                default: false
+            };
+            
+            // Store using ProjectManager (this will handle both secure storage and metadata)
+            await this.projectManager.addProject(projectCredential);
+            await this.projectManager.storeProjectToken(projectId, token);
+
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `✅ Token added successfully for project "${tokenInfo.owner?.name || 'Unknown'}"!`,
+                container: 'tokenMessageContainer'
+            });
+
+            // Refresh the projects list and tree view
+            await this.handleGetProjects();
+            
+            // Notify extension to refresh tree view
+            vscode.commands.executeCommand('keboola.refreshProjectTreeView');
+
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `❌ Failed to add token: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
+            });
+        }
+    }
+
+    private async handleTestAdditionalToken(tokenId: string): Promise<void> {
+        try {
+            const project = await this.projectManager.getProject(tokenId);
+            
+            if (!project) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: '❌ Project not found.',
+                    container: 'tokenMessageContainer'
+                });
+                return;
+            }
+
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'info',
+                text: `Testing connection for ${project.name}...`,
+                container: 'tokenMessageContainer'
+            });
+
+            const success = await this.projectManager.testProjectConnection(tokenId);
+            
+            if (success) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'success',
+                    text: `✅ Connection successful for "${project.name}"!`,
+                    container: 'tokenMessageContainer'
+                });
+            } else {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: `❌ Connection failed for "${project.name}".`,
+                    container: 'tokenMessageContainer'
+                });
+            }
+
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `❌ Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
+            });
+        }
+    }
+
+    private async handleRemoveAdditionalToken(tokenId: string): Promise<void> {
+        try {
+            const project = await this.projectManager.getProject(tokenId);
+            
+            if (!project) {
+                this.panel.webview.postMessage({
+                    command: 'showMessage',
+                    type: 'error',
+                    text: '❌ Project not found.',
+                    container: 'tokenMessageContainer'
+                });
+                return;
+            }
+
+            // Remove using ProjectManager
+            await this.projectManager.removeProject(tokenId);
+
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'success',
+                text: `✅ Token for "${project.name}" removed successfully!`,
+                container: 'tokenMessageContainer'
+            });
+
+            // Refresh the token list and tree view
+            await this.handleGetAdditionalTokens();
+            
+            // Notify extension to refresh tree view
+            vscode.commands.executeCommand('keboola.refreshProjectTreeView');
+
+        } catch (error) {
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `❌ Failed to remove token: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
+            });
+        }
+    }
+
+    private async handleGetProjects(): Promise<void> {
+        try {
+            // Get all projects from ProjectManager
+            const allProjects = await this.projectManager.getProjects();
+            
+            // Show ALL projects except the original default one
+            // This way new projects show up regardless of their default status
+            const additionalProjects = allProjects.filter(project => project.id !== 'default');
+
+            console.log('All projects:', allProjects);
+            console.log('Additional projects for display:', additionalProjects);
+
+            this.panel.webview.postMessage({
+                command: 'projectsLoaded',
+                projects: additionalProjects
+            });
+
+        } catch (error) {
+            console.error('Failed to load projects:', error);
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `❌ Failed to load projects: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
+            });
+        }
+    }
+
+    private async handleGetAdditionalTokens(): Promise<void> {
+        try {
+            // Get all projects from ProjectManager
+            const allProjects = await this.projectManager.getProjects();
+            
+            // Filter out the default project (keep only additional tokens)
+            const additionalTokens = allProjects
+                .filter(project => project.id !== 'default' && !project.default)
+                .map(project => ({
+                    id: project.id,
+                    projectId: project.id,
+                    projectName: project.name,
+                    stackUrl: project.stackUrl,
+                    description: ''
+                }));
+
+            this.panel.webview.postMessage({
+                command: 'additionalTokensLoaded',
+                tokens: additionalTokens
+            });
+
+        } catch (error) {
+            console.error('Failed to load additional tokens:', error);
+            this.panel.webview.postMessage({
+                command: 'showMessage',
+                type: 'error',
+                text: `❌ Failed to load tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                container: 'tokenMessageContainer'
+            });
+        }
+    }
+
+    private handleGetStackUrl(): void {
+        const currentApiUrl = this.context.globalState.get<string>('keboola.apiUrl') || '';
+        this.panel.webview.postMessage({
+            command: 'stackUrlLoaded',
+            stackUrl: currentApiUrl
+        });
     }
 
     private async performSystemCheck(): Promise<{
@@ -1363,44 +1591,40 @@ export class SettingsPanel {
                                class="form-input" 
                                placeholder="Enter your Keboola Storage API token..."
                                value="${settings.token}">
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <button class="button" onclick="saveToken()">💾 Save Token</button>
+                            <button class="button secondary" onclick="testConnection()" id="testConnectionBtn">🔧 Test Connection</button>
+                        </div>
+                        <!-- Message container for main token -->
+                        <div id="connectionMessageContainer" style="margin-top: 15px;"></div>
                     </div>
                     
-                    <div style="display: flex; gap: 12px;">
-                        <button class="button" onclick="saveToken()">💾 Save Token</button>
-                        <button class="button secondary" onclick="testConnection()" id="testConnectionBtn">🔧 Test Connection</button>
-                    </div>
-                    
-                    <!-- Message container for connection testing -->
-                    <div id="connectionMessageContainer" style="margin-top: 15px;"></div>
-                </div>
-                
-                <!-- Multi-Project Credentials Section -->
-                <div class="section">
-                    <h2 class="section-title">🏢 Multi-Project Credentials (for AI Agents)</h2>
-                    <div class="settings-container">
-                        <p style="margin-bottom: 20px; color: var(--vscode-descriptionForeground);">
-                            Manage multiple Keboola project credentials for AI agents. Agents can operate across different projects using these credentials.
+                    <!-- Additional Projects Section (Simplified) -->
+                    <div class="form-group" id="additionalProjectsSection">
+                        <label class="form-label">➕ Additional Projects (Same Stack):</label>
+                        <p style="margin-bottom: 12px; color: var(--vscode-descriptionForeground); font-size: 13px;">
+                            Add API tokens for other projects on the same stack. Project details will be automatically detected.
                         </p>
                         
-                        <div id="projectsList" style="margin-bottom: 20px;">
+                        <div id="projectsList" style="margin-bottom: 12px;">
                             <!-- Projects will be loaded here -->
                         </div>
                         
-                        <div style="display: flex; gap: 12px;">
-                            <button class="button" onclick="loadProjects()">🔄 Refresh Projects</button>
-                            <button class="button secondary" onclick="showAddProjectForm()">➕ Add Project</button>
+                        <div class="add-token-section" style="background: var(--vscode-input-background); padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                            <input type="password" 
+                                   id="newTokenInput" 
+                                   class="form-input" 
+                                   placeholder="Enter API token..."
+                                   style="margin-bottom: 8px;">
+                            <button class="button" onclick="addSimpleToken()">➕ Add Token</button>
                         </div>
                         
-                        <!-- Message container for project operations -->
-                        <div id="projectMessageContainer" style="margin-top: 15px;"></div>
-                        
-                        <div style="margin-top: 16px; font-size: 12px; color: var(--vscode-descriptionForeground);">
-                            💡 <strong>Default Project:</strong> Used when no specific project is specified<br>
-                            💡 <strong>Token Storage:</strong> Tokens are stored securely in VS Code SecretStorage<br>
-                            💡 <strong>Agent Access:</strong> Agents can access any project listed here
-                        </div>
+                        <!-- Message container for token operations -->
+                        <div id="tokenMessageContainer" style="margin-top: 15px;"></div>
                     </div>
                 </div>
+                
+
                 
                 <div class="section">
                     <h2 class="section-title">⚙️ Row Limits & Export Settings</h2>
@@ -1758,82 +1982,108 @@ export class SettingsPanel {
                     }
                 });
 
-                // Multi-project credentials functions
+                // Simplified token addition function
+                function addSimpleToken() {
+                    const tokenInput = document.getElementById('newTokenInput');
+                    
+                    if (!tokenInput) {
+                        showMessage('error', 'Token input field not found', 'tokenMessageContainer');
+                        return;
+                    }
+                    
+                    const token = tokenInput.value.trim();
+                    
+                    if (!token) {
+                        showMessage('error', 'Please enter a token', 'tokenMessageContainer');
+                        return;
+                    }
+                    
+                    // Get stack URL from stored value
+                    const stackUrl = window.currentStackUrl;
+                    
+                    if (!stackUrl) {
+                        showMessage('error', 'Please set the API URL first', 'tokenMessageContainer');
+                        return;
+                    }
+                    
+                    // Show loading message
+                    showMessage('info', '🔄 Testing token and detecting project...', 'tokenMessageContainer');
+                    
+                    vscode.postMessage({
+                        command: 'addAdditionalToken',
+                        token: token,
+                        stackUrl: stackUrl
+                    });
+                    
+                    // Clear the input after sending
+                    tokenInput.value = '';
+                }
+                
+                function testAdditionalToken(tokenId) {
+                    vscode.postMessage({
+                        command: 'testAdditionalToken',
+                        tokenId: tokenId
+                    });
+                }
+                
+                function removeAdditionalToken(tokenId) {
+                    // Note: confirm() doesn't work in VS Code webviews
+                    vscode.postMessage({
+                        command: 'removeAdditionalToken',
+                        tokenId: tokenId
+                    });
+                }
+                
                 function loadProjects() {
                     vscode.postMessage({
                         command: 'getProjects'
                     });
                 }
                 
-                function showAddProjectForm() {
+                // Load projects and stack URL when page loads
+                document.addEventListener('DOMContentLoaded', function() {
+                    loadProjects();
+                    vscode.postMessage({ command: 'getStackUrl' });
+                });
+                
+                function updateProjectsList(projects) {
                     const projectsList = document.getElementById('projectsList');
                     if (!projectsList) return;
                     
-                    const formHtml = \`
-                        <div class="project-form" style="background: var(--vscode-input-background); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
-                            <h4 style="margin: 0 0 12px 0;">Add New Project</h4>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px;">Project ID:</label>
-                                    <input type="text" id="newProjectId" placeholder="my-project" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 4px; font-size: 12px;">Project Name:</label>
-                                    <input type="text" id="newProjectName" placeholder="My Project" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
-                                </div>
-                            </div>
-                            <div style="margin-bottom: 12px;">
-                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">Stack URL:</label>
-                                <input type="text" id="newProjectUrl" placeholder="https://connection.eu-central-1.keboola.com/" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
-                            </div>
-                            <div style="margin-bottom: 12px;">
-                                <label style="display: block; margin-bottom: 4px; font-size: 12px;">API Token:</label>
-                                <input type="password" id="newProjectToken" placeholder="Enter API token" style="width: 100%; padding: 6px; border: 1px solid var(--vscode-input-border); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground);">
-                            </div>
-                            <div style="display: flex; gap: 8px;">
-                                <button onclick="addProject()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Add Project</button>
-                                <button onclick="cancelAddProject()" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cancel</button>
-                            </div>
-                        </div>
-                    \`;
-                    
-                    projectsList.insertAdjacentHTML('afterbegin', formHtml);
-                }
-                
-                function addProject() {
-                    const projectId = document.getElementById('newProjectId').value.trim();
-                    const projectName = document.getElementById('newProjectName').value.trim();
-                    const stackUrl = document.getElementById('newProjectUrl').value.trim();
-                    const token = document.getElementById('newProjectToken').value.trim();
-                    
-                    if (!projectId || !projectName || !stackUrl || !token) {
-                        showMessage('error', 'Please fill in all fields', 'projectMessageContainer');
+                    if (projects.length === 0) {
+                        projectsList.innerHTML = '<p style="color: var(--vscode-descriptionForeground); font-style: italic; font-size: 13px;">No additional projects configured.</p>';
                         return;
                     }
                     
-                    const project = {
-                        id: projectId,
-                        name: projectName,
-                        stackUrl: stackUrl,
-                        tokenSecretKey: \`keboola.token.\${projectId}\`,
-                        default: false
-                    };
+                    const projectsHtml = projects.map(project => \`
+                        <div class="project-item" style="background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; color: var(--vscode-editor-foreground);">
+                                        \${project.name}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 4px;">
+                                        ID: \${project.id}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick="testProjectConnection('\${project.id}')" 
+                                            style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Test
+                                    </button>
+                                    <button onclick="removeProject('\${project.id}')" 
+                                            style="background: #d73a49; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    \`).join('');
                     
-                    vscode.postMessage({
-                        command: 'addProject',
-                        project: project,
-                        token: token
-                    });
-                    
-                    cancelAddProject();
+                    projectsList.innerHTML = projectsHtml;
                 }
                 
-                function cancelAddProject() {
-                    const form = document.querySelector('.project-form');
-                    if (form) {
-                        form.remove();
-                    }
-                }
+
                 
                 function testProjectConnection(projectId) {
                     vscode.postMessage({
@@ -1843,12 +2093,12 @@ export class SettingsPanel {
                 }
                 
                 function removeProject(projectId) {
-                    if (confirm('Are you sure you want to remove this project?')) {
-                        vscode.postMessage({
-                            command: 'removeProject',
-                            projectId: projectId
-                        });
-                    }
+                    // Show confirmation message and proceed with removal
+                    showMessage('info', 'Removing project...', 'tokenMessageContainer');
+                    vscode.postMessage({
+                        command: 'removeProject',
+                        projectId: projectId
+                    });
                 }
                 
                 // Listen for messages from the extension
@@ -1868,16 +2118,34 @@ export class SettingsPanel {
                         case 'projectsUpdated':
                             updateProjectsList(message.projects);
                             break;
+                        case 'stackUrlLoaded':
+                            window.currentStackUrl = message.stackUrl;
+                            console.log('Stack URL loaded:', message.stackUrl);
+                            break;
                     }
                 });
                 
-                function updateProjectsList(projects) {
-                    const projectsList = document.getElementById('projectsList');
-                    if (!projectsList) return;
+                function updateTokensList(projects) {
+                    const tokensList = document.getElementById('tokensList');
+                    if (!tokensList) return;
                     
                     if (projects.length === 0) {
-                        projectsList.innerHTML = '<p style="color: var(--vscode-descriptionForeground); font-style: italic;">No projects configured. Click "Add Project" to get started.</p>';
+                        tokensList.innerHTML = '<p style="color: var(--vscode-descriptionForeground); font-style: italic;">No tokens configured. Click "Add Token" to get started.</p>';
                         return;
+                    }
+                    
+                    // Show stack info if multiple projects
+                    let stackInfo = '';
+                    if (projects.length > 0) {
+                        const stackUrl = projects[0].stackUrl;
+                        stackInfo = \`<div style="background: var(--vscode-textBlockQuote-background); border-left: 3px solid var(--vscode-textBlockQuote-border); padding: 8px; margin-bottom: 12px; border-radius: 3px;">
+                            <div style="font-size: 12px; color: var(--vscode-descriptionForeground);">
+                                <strong>Stack:</strong> \${stackUrl}
+                            </div>
+                            <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 4px;">
+                                All tokens use the same stack as your main connection
+                            </div>
+                        </div>\`;
                     }
                     
                     const projectsHtml = projects.map(project => \`
@@ -1888,23 +2156,23 @@ export class SettingsPanel {
                                         \${project.name} \${project.default ? '<span style="background: var(--vscode-charts-blue); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 8px;">DEFAULT</span>' : ''}
                                     </div>
                                     <div style="font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 4px;">
-                                        ID: \${project.id} • URL: \${project.stackUrl}
+                                        ID: \${project.id}
                                     </div>
                                 </div>
                                 <div style="display: flex; gap: 6px;">
-                                    <button onclick="testProjectConnection('\${project.id}')" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Test</button>
-                                    <button onclick="removeProject('\${project.id}')" style="background: var(--vscode-errorForeground); color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Remove</button>
+                                    <button onclick="testTokenConnection('\${project.id}')" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Test</button>
+                                    <button onclick="removeToken('\${project.id}')" style="background: var(--vscode-errorForeground); color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Remove</button>
                                 </div>
                             </div>
                         </div>
                     \`).join('');
                     
-                    projectsList.innerHTML = projectsHtml;
+                    tokensList.innerHTML = stackInfo + projectsHtml;
                 }
                 
-                // Load projects on page load
+                // Load tokens on page load
                 document.addEventListener('DOMContentLoaded', function() {
-                    loadProjects();
+                    loadTokens();
                 });
             </script>
         </body>

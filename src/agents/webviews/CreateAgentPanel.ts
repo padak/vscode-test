@@ -96,7 +96,7 @@ export class CreateAgentPanel {
 
     private async handleValidateAgent(data: any) {
         try {
-            const config = this.buildAgentConfig(data);
+            const config = await this.buildAgentConfig(data);
             const validationPlan = this.generateValidationPlan(config);
             
             this._panel.webview.postMessage({
@@ -120,7 +120,7 @@ export class CreateAgentPanel {
 
     private async handleCreateAgent(data: any) {
         try {
-            const config = this.buildAgentConfig(data);
+            const config = await this.buildAgentConfig(data);
             const agentId = await this.store.createRun(config);
             
             // Automatically start the agent after creation
@@ -184,8 +184,33 @@ export class CreateAgentPanel {
         }
     }
 
-    private buildAgentConfig(data: any): AgentConfig {
+    private async buildAgentConfig(data: any): Promise<AgentConfig> {
         const policy = PolicyValidator.mergeWithDefaults(data.policy || {});
+        
+        // Get all available projects automatically
+        let projects: any[] = [];
+        let defaultProjectId = 'default';
+        
+        try {
+            const { MultiProjectApiManager } = await import('../../MultiProjectApiManager');
+            const multiProjectApiManager = new MultiProjectApiManager(this._context);
+            const availableProjects = await multiProjectApiManager.getAvailableProjects();
+            
+            if (availableProjects.length > 0) {
+                projects = availableProjects.map(project => ({
+                    id: project.id,
+                    name: project.name,
+                    stackUrl: project.stackUrl,
+                    tokenSecretKey: project.tokenSecretKey,
+                    default: project.default
+                }));
+                
+                const defaultProject = availableProjects.find(p => p.default) || availableProjects[0];
+                defaultProjectId = defaultProject?.id || 'default';
+            }
+        } catch (error) {
+            console.error('Failed to load available projects for agent config:', error);
+        }
         
         return {
             id: `agent_${Date.now()}`,
@@ -196,8 +221,8 @@ export class CreateAgentPanel {
             allowedLLMs: data.allowedLLMs || [data.selectedLLM],
             allowedTools: data.allowedTools || [],
             credentials: data.credentials || [],
-            projects: data.projects || [],
-            defaultProjectId: data.defaultProjectId || 'default',
+            projects: projects,
+            defaultProjectId: defaultProjectId,
             budgetUSD: data.budgetUSD || 10.0,
             tokenBudget: data.tokenBudget || 0,
             timeLimitSec: data.timeLimitSec || 3600,
@@ -273,9 +298,9 @@ export class CreateAgentPanel {
 
     private async handleGetAvailableProjects() {
         try {
-            const { ProjectManager } = await import('../../ProjectManager');
-            const projectManager = new ProjectManager(this._context);
-            const projects = await projectManager.getProjects();
+            const { MultiProjectApiManager } = await import('../../MultiProjectApiManager');
+            const multiProjectApiManager = new MultiProjectApiManager(this._context);
+            const projects = await multiProjectApiManager.getAvailableProjects();
             
             this._panel.webview.postMessage({
                 command: 'availableProjectsLoaded',
