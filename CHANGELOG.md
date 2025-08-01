@@ -5,6 +5,35 @@ All notable changes to the Keboola Data Engineering Booster extension will be do
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2025-01-22
+
+### 🚀 MAJOR FEATURE: Complete Multi-Project Support
+- **🏢 Simultaneous Multi-Project Display**: All projects now display simultaneously in the tree view - no more project switching required!
+- **🌳 Independent Project Sections**: Each project has its own Storage, Configurations, and Jobs sections for parallel operations
+- **🔒 Same-Stack Enforcement**: Strict validation ensures all projects must be on the same Keboola stack for security and consistency
+- **🎯 Auto-Detection Token Addition**: Simply paste an API token and project details are automatically detected and added
+- **⚡ Simplified Workflow**: Eliminated complex project switching UI in favor of direct multi-project access
+- **🔄 Backward Compatibility**: Existing single-project setups continue working seamlessly
+
+### 🔧 Enhanced
+- **Tree Provider Architecture**: Complete overhaul to support multiple projects with independent data providers
+- **Project Context Management**: Each data provider (Storage, Jobs) now maintains project-specific context and caching
+- **Settings Panel Simplification**: Streamlined token addition with one-click project detection
+- **API Management**: Enhanced MultiProjectApiManager with proper project-specific API instance caching
+- **Error Handling**: Improved error messages with project-specific context for better debugging
+
+### 🐛 Fixed
+- **Project List Display**: Fixed filtering logic so new projects appear immediately in settings
+- **Remove Project Functionality**: Fixed confirm() dialog issues in VS Code webviews - removal now works properly
+- **Multi-Project Tree Refresh**: Proper tree view refresh after project additions/removals
+- **Project Switching Commands**: Removed obsolete project switching commands that are no longer needed
+
+### 🏗️ Technical Architecture
+- **New Tree Items**: MultiProjectTreeItem and ProjectSectionItem for proper project hierarchy
+- **Project Data Isolation**: Each project maintains independent data cache and API connections  
+- **Enhanced ProjectManager**: Strict same-stack validation with improved error handling
+- **Command Cleanup**: Removed project switching commands in favor of direct multi-project navigation
+
 ## [4.0.4] - 2025-08-01
 
 ### 🆕 Added

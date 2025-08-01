@@ -6,9 +6,10 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ---
 
-## 🚀 **Key Features (Version 4.0.0)**
+## 🚀 **Key Features (Version 4.1.0)**
 
 ### 🤖 **NEW: AI Agents System** *(Version 4.0.0)*
+> **Note**: AI Agents operate as a separate top-level section independent of individual projects
 - **🆕 AI Agent Management**: Create, monitor, and control AI agents for data engineering tasks
 - **🤖 Agent Runtime**: Real-time agent execution with policy enforcement and safety guardrails
 - **📊 Live Monitoring**: Track agent status, progress, confidence, and cost in real-time
@@ -41,6 +42,16 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Real-time Updates**: Live status and progress indicators
 - **Detail Panels**: Comprehensive agent information and monitoring
 
+### 🏢 **NEW: Complete Multi-Project Support** *(Version 4.1.0)*
+- **🚀 Simultaneous Display**: All projects shown at once - no more project switching!
+- **🌳 Independent Sections**: Each project has its own Storage, Configurations, and Jobs sections
+- **🔒 Same-Stack Security**: Strict validation ensures all projects are on the same Keboola stack
+- **⚡ Auto-Detection**: Paste API tokens and project details are automatically detected
+- **🔄 Parallel Operations**: Work with multiple projects simultaneously for maximum productivity
+- **🎯 Simplified Management**: Streamlined token addition without complex forms
+- **📊 Cross-Project Analysis**: Compare data, configurations, and performance across environments
+- **🔄 Backward Compatibility**: Existing single-project setups continue working seamlessly
+
 ### 📊 **Storage Explorer** *(Preserved from v2.x)*
 - **Browse Your Data Structure**: See all your stages (in, out), buckets, and tables in a tree view
 - **Real-time Data Preview**: View table data directly in VS Code without leaving your editor
@@ -68,21 +79,22 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Interactive Actions**: Refresh job status, copy job IDs, and open jobs in Keboola UI
 - **Performance Monitoring**: Duration tracking, resource usage insights, and execution timeline analysis
 
-### 🔌 **Easy Connection Setup**
+### 🔌 **Easy Connection Setup** *(Enhanced in 4.1.0)*
 - **Multi-Region Support**: Connect to any Keboola region (US, EU, Asia-Pacific)
 - **Secure Authentication**: Store your API tokens securely
 - **Connection Testing**: Verify your connection with one click
 - **API Status Visibility**: Connection status prominently displayed at the top level
-- **Single Project Focus**: Streamlined single-project architecture for simplified management
-- **Unified API Client**: Same connection settings work for both Storage and Configurations
+- **🆕 Multi-Project Architecture**: Add multiple projects from the same stack with simple token addition
+- **🆕 Auto-Detection**: Paste any API token and project details are automatically detected
+- **Unified API Client**: Same connection settings work for Storage, Configurations, and Jobs (AI Agents have separate management)
 
-### 🌳 **Enhanced Tree Structure** *(Version 3.3.3)*
+### 🌳 **Multi-Project Tree Structure** *(Version 4.1.0)*
+- **🚀 NEW: Simultaneous Multi-Project Display**: All projects shown at once - no more switching between projects!
 - **API Status at Top Level**: Connection status appears as the very first item for immediate awareness
-- **Two Root Elements**: Clean hierarchy with API Status and Project Node as separate root items
-- **Single-Project Architecture**: Streamlined to single-project focus, removing multi-project complexity
-- **Professional Layout**: Enterprise-grade tree organization with clear purpose separation
-- **Immediate Feedback**: API connection status visible without any interaction or expansion
-- **NEW: AI Agents Section**: Fourth major section alongside Storage, Configurations, and Jobs
+- **Independent Project Sections**: Each project has its own Storage, Configurations, and Jobs sections
+- **Same-Stack Enforcement**: All projects must be on the same Keboola stack for security and consistency
+- **Professional Layout**: Enterprise-grade tree organization with clear project boundaries
+- **Immediate Feedback**: API connection status and all project data visible without interaction
 
 ### 📁 **Smart Data Export** *(Enhanced)*
 - **Workspace Integration**: Export data directly into your VS Code workspace
@@ -144,12 +156,13 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ### 🎯 **User-Friendly Interface**
 
-#### **Activity Bar Integration**
+#### **Activity Bar Integration** *(Enhanced in 4.1.0)*
 - Dedicated Keboola icon in VS Code's side panel
 - **API Status at Top Level**: Connection status appears as the very first item for immediate awareness
-- **Quadruple-Section View**: Storage, Configurations, Jobs, and AI Agents in the same unified interface
+- **🆕 Multi-Project View**: Each project has its own complete section with Storage, Configurations, and Jobs
+- **🆕 Parallel Operations**: Work with multiple projects simultaneously without switching
 - Always accessible from anywhere in your project
-- **Unified Navigation**: Switch seamlessly between data, configuration, job monitoring, and AI agent management
+- **Enhanced Navigation**: Navigate seamlessly between multiple projects and their respective data, configurations, jobs, and AI agents
 
 #### **Smart Panels**
 - **API Status Panel**: Global connection status indicator at the top level
@@ -226,7 +239,7 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **NEW**: Inspect branch-specific setups
 - **NEW**: Copy configuration JSONs for local development
 
-### **For Data Engineers** *(Enhanced)*
+### **For Data Engineers** *(Enhanced in 4.1.0)*
 - Monitor data quality across stages
 - Create data backups and snapshots
 - Document data schemas and structures
@@ -234,6 +247,9 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **NEW**: Audit project configurations across branches
 - **NEW**: Review component versions and changes
 - **NEW**: Manage development vs. production configurations
+- **🆕 Multi-Project**: Compare data quality and configurations across production, staging, and development projects simultaneously
+- **🆕 Parallel Operations**: Monitor jobs and manage configurations across multiple projects without switching
+- **🆕 Cross-Project Analysis**: Compare table schemas, configurations, and performance across environments
 
 ### **For Business Users** *(Enhanced)*
 - Browse available data assets
@@ -268,6 +284,15 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Debugging Tools**: Detailed execution traces and analysis capabilities
 - **Automation Testing**: Demo agents for testing AI capabilities safely
 
+### **🆕 For Multi-Project Teams** *(Version 4.1.0)*
+- **Environment Management**: Simultaneously manage production, staging, and development environments
+- **Cross-Project Comparison**: Compare configurations, data quality, and performance across projects
+- **Parallel Development**: Work on multiple projects without constant context switching
+- **Team Collaboration**: Share access to multiple project environments with team members
+- **Deployment Pipeline**: Monitor data flow and jobs across the entire development pipeline
+- **Configuration Sync**: Compare and align configurations between different project environments
+- **Quality Assurance**: Validate data consistency and configuration parity across environments
+
 ---
 
 ## 💡 **Tips & Best Practices**
@@ -300,6 +325,15 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 - **Export Reports**: Generate comprehensive execution reports for documentation
 - **Cost Management**: Monitor budget usage and token consumption
 
+### **🆕 Multi-Project Management** *(Version 4.1.0)*
+- **Same Stack Only**: Ensure all projects are on the same Keboola stack for security
+- **Logical Organization**: Name projects clearly (e.g., "Production", "Staging", "Development")
+- **Token Security**: Use project-specific API tokens with appropriate permissions
+- **Parallel Monitoring**: Keep an eye on jobs across all projects simultaneously
+- **Configuration Parity**: Use the extension to compare configurations between environments
+- **Team Coordination**: Share project access patterns with team members
+- **Environment Validation**: Regularly verify data consistency across project environments
+
 ### **Workspace Organization**
 - Choose meaningful export folder names
 - Use consistent naming conventions
@@ -322,27 +356,57 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ---
 
-## 🔄 **What's New in Version 4.0.4**
+## 🔄 **What's New in Version 4.1.0**
 
-### 🏢 **Version 4.0.4 - Multi-Project Credentials for AI Agents**
-#### 🆕 **Major New Features**
-- **🏢 Multi-Project Support**: AI agents can now operate across multiple Keboola projects simultaneously
+### 🏢 **Version 4.1.0 - Complete Multi-Project Support**
+#### 🚀 **MAJOR NEW FEATURE: Simultaneous Multi-Project Display**
+- **🏢 No More Project Switching**: All projects now display simultaneously in the tree view!
+- **🌳 Independent Project Sections**: Each project has its own Storage, Configurations, and Jobs sections
+- **🔒 Same-Stack Security**: Strict validation ensures all projects are on the same Keboola stack
+- **⚡ Instant Access**: Work with multiple projects simultaneously for maximum productivity
+- **🔄 Backward Compatibility**: Existing single-project setups continue working seamlessly
+
+#### 🎯 **Simplified Token Management**
+- **One-Click Addition**: Simply paste an API token and project details are auto-detected
+- **Smart Validation**: Automatic project information retrieval and same-stack validation
+- **Clean Interface**: Streamlined settings panel without complex forms
+- **Instant Refresh**: New projects appear immediately in both tree view and settings
+
+#### 🌳 **New Tree Structure**
+```
+📁 Keboola Explorer
+├── ✅ Connected to Keboola API
+├── 📊 Production Project
+│   ├── 🗄️ Storage
+│   ├── ⚙️ Configurations
+│   └── ▶️ Jobs
+├── 📊 Staging Project
+│   ├── 🗄️ Storage
+│   ├── ⚙️ Configurations
+│   └── ▶️ Jobs
+├── 📊 Development Project
+│   ├── 🗄️ Storage
+│   ├── ⚙️ Configurations
+│   └── ▶️ Jobs
+└── 🤖 AI Agents
+    ├── 🏃 Running
+    ├── ✅ Completed
+    ├── ❌ Failed
+    └── 📥 HITL Inbox
+```
+
+#### 🔧 **Enhanced Architecture**
+- **Project Context Management**: Each data provider maintains project-specific context and caching
+- **Independent Operations**: Projects operate completely independently without interference
+- **Improved Error Handling**: Project-specific error messages and debugging context
+- **Command Cleanup**: Removed obsolete project switching commands
+
+### 🏢 **Version 4.0.4 - Multi-Project Credentials for AI Agents** *(Previous Release)*
+#### 🆕 **AI Agent Multi-Project Features**
+- **🏢 AI Agent Multi-Project Support**: AI agents can now operate across multiple Keboola projects simultaneously
 - **🔑 Project Credentials Management**: Add, edit, and remove project credentials with secure token storage
 - **🎯 Project Selection**: Choose which projects agents can access with per-project permissions
-- **🔄 Backward Compatibility**: Existing single-project agents continue to work without changes
 - **📊 Project Context**: Agents can specify which project to use for each tool call
-
-#### 🔧 **Enhanced Agent Configuration**
-- **Project Context Array**: Agents now include `projects[]` and `defaultProjectId` fields
-- **Migration Support**: Automatic migration of old agent configs to multi-project format
-- **Project Guardrails**: Policy-based restrictions on which projects agents can access
-- **Token Security**: Project tokens stored securely in VS Code SecretStorage
-
-#### 🎨 **Settings Panel Enhancements**
-- **Multi-Project UI**: New section in Settings for managing project credentials
-- **Project Management**: Add, test, and remove project connections
-- **Default Project**: Set which project is used when none is specified
-- **Connection Testing**: Verify project credentials before adding them
 
 ### 🐛 **Version 4.0.2 - Bucket Detail Panel Fix**
 #### 🔧 **Critical Bug Fix**
@@ -401,15 +465,15 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 
 ## 🎬 **Getting Started**
 
-### **First-Time Setup**
+### **First-Time Setup** *(Updated for 4.1.0)*
 1. **Install**: Get the extension from VS Code marketplace
-2. **Configure**: Open settings and add your Keboola connection details
+2. **Configure**: Open settings and add your main Keboola connection details
 3. **Test**: Use the "Test Connection" button to verify setup
 4. **Check API Status**: See connection status at the top of the tree view
-5. **Explore Storage**: Browse your data in the Storage section
-6. **Explore Configurations**: Check out the Configurations section below Storage
-7. **NEW: Monitor Jobs**: Track job execution in the Jobs section for real-time monitoring
-8. **NEW: Create AI Agents**: Build and manage AI agents in the AI Agents section
+5. **🆕 Add Additional Projects**: Paste API tokens for other projects on the same stack
+6. **🆕 Multi-Project View**: See all your projects displayed simultaneously in the tree
+7. **Explore Per-Project**: Each project has its own Storage, Configurations, and Jobs sections
+8. **Work in Parallel**: Access multiple projects at once without switching
 
 ### **Storage Workflow**
 1. **Browse**: Navigate through stages, buckets, and tables
@@ -442,4 +506,13 @@ The **Keboola Data Engineering Booster** extension is a comprehensive VS Code to
 6. **Monitor Progress**: Track status, progress, and cost in real-time
 7. **Review Results**: Examine traces and export execution reports
 
-**Ready to manage your complete Keboola ecosystem with AI agents, real-time monitoring, and human oversight!** 🚀🤖📊 
+### **🆕 Multi-Project Workflow** *(Version 4.1.0)*
+1. **Set Up Main Project**: Configure your primary Keboola project connection
+2. **Add Additional Projects**: Paste API tokens for other projects on the same stack
+3. **Auto-Detection**: Project details are automatically detected and validated
+4. **Simultaneous Access**: All projects appear in the tree view at once
+5. **Independent Operations**: Work with Storage, Configurations, and Jobs across all projects
+6. **Parallel Development**: Compare data, configurations, and jobs across projects instantly
+7. **Manage Projects**: Add, test, or remove projects as needed in Settings
+
+**Ready to manage your complete multi-project Keboola ecosystem with simultaneous access, AI agents, real-time monitoring, and human oversight!** 🚀🏢🤖📊 
